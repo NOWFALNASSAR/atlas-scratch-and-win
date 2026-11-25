@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html lang="ml">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#741233">
+<title>Scratch &amp; Win – Counter</title>
+<link href="https://fonts.googleapis.com/css2?family=Baloo+Chettan+2:wght@500;700;800&family=Noto+Sans+Malayalam:wght@400;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<header>
+  <div class="top">
+    <div><h1><span id="brand">Atlas Maharani</span> · <b>Scratch &amp; Win</b></h1><small id="campLbl"></small></div>
+    <div class="who" id="who" hidden><span id="brLbl"></span><button id="logout" type="button">ബ്രാഞ്ച് മാറ്റുക</button></div>
+  </div>
+  <nav role="tablist" id="tabs" hidden>
+    <button role="tab" data-v="scratch" aria-selected="true">സ്ക്രാച്ച്</button>
+    <button role="tab" data-v="redeem">കൂപ്പൺ റിഡീം</button>
+  </nav>
+</header>
+<main>
+<!-- Login -->
+<section id="v-login" class="col" hidden>
+  <h2>ബ്രാഞ്ച് ലോഗിൻ</h2>
+  <p class="note">ഹെഡ് ഓഫീസ് തന്ന 6 അക്ക ബ്രാഞ്ച് PIN അടിക്കുക. ഈ ടാബിൽ ഒരു തവണ ചെയ്താൽ മതി.</p>
+  <form id="loginForm" novalidate>
+    <label for="pin">ബ്രാഞ്ച് PIN</label>
+    <input id="pin" type="password" inputmode="numeric" maxlength="6" autocomplete="off">
+    <div class="err" id="loginErr" role="alert"></div>
+    <button class="btn w" type="submit">ലോഗിൻ</button>
+  </form>
+</section>
+
+<!-- Scratch -->
+<section id="v-scratch" class="col" hidden>
+  <form id="entry" novalidate>
+    <h2>ബിൽ വിവരങ്ങൾ</h2>
+    <div class="row2">
+      <div><label for="fBill">ബിൽ നമ്പർ</label><input id="fBill" autocomplete="off"></div>
+      <div><label for="fAmt">ബിൽ തുക (₹)</label><input id="fAmt" type="number" inputmode="numeric" min="0"></div>
+    </div>
+    <label for="fName">കസ്റ്റമറുടെ പേര്</label><input id="fName" autocomplete="off">
+    <label for="fMob">മൊബൈൽ നമ്പർ</label><input id="fMob" type="tel" inputmode="numeric" maxlength="10" autocomplete="off">
+    <div class="err" id="fErr" role="alert"></div>
+    <button class="btn gold w" type="submit" id="goBtn">സ്ക്രാച്ച് കാർഡ് എടുക്കുക</button>
+    <p class="note" id="minNote"></p>
+  </form>
+  <div id="play" hidden>
+    <p class="hi" id="hi"></p>
+    <div class="sc"><div class="face"><div><div class="big" id="pName"></div><div class="t" id="pType"></div></div></div><canvas id="cv"></canvas></div>
+    <div class="flex" style="justify-content:center;margin-top:10px"><button class="btn ghost sm" id="revealAll" type="button">മുഴുവൻ കാണിക്കുക</button></div>
+    <div class="res" id="res" hidden>
+      <div class="flex" style="justify-content:space-between"><span class="pill g" id="rType"></span><span class="note" id="rExp"></span></div>
+      <p style="margin:10px 0 2px">കൂപ്പൺ കോഡ്</p><div class="code" id="rCode"></div>
+      <div class="msg" id="rMsg"></div>
+      <div class="flex"><a class="btn wa" id="waBtn" target="_blank" rel="noopener">WhatsApp-ൽ അയക്കുക</a></div>
+      <button class="btn w" id="next" type="button">അടുത്ത കസ്റ്റമർ</button>
+    </div>
+  </div>
+</section>
+
+<!-- Redeem -->
+<section id="v-redeem" class="col" hidden>
+  <h2>കൂപ്പൺ റിഡീം</h2>
+  <p class="note">കസ്റ്റമർ കൂപ്പണുമായി വരുമ്പോൾ കോഡ് അടിച്ച് ചെക്ക് ചെയ്യുക.</p>
+  <form id="rdForm" class="flex" novalidate><input id="rdCode" placeholder="ATL-XXXXX" style="flex:1 1 200px;text-transform:uppercase" autocomplete="off"><button class="btn" type="submit">ചെക്ക് ചെയ്യുക</button></form>
+  <div id="rdOut"></div>
+</section>
+
+<section id="v-config" class="col" hidden>
+  <h2>സെറ്റപ്പ് പൂർത്തിയായിട്ടില്ല</h2>
+  <p>config.js ഫയലിൽ Supabase URL-ഉം anon key-ഉം ഇട്ടിട്ടില്ല. സെറ്റപ്പ് ഗൈഡിലെ സ്റ്റെപ്പ് 4 നോക്കുക.</p>
+</section>
+</main>
+
+<script src="config.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
+<script>
+{
+const $=id=>document.getElementById(id);
+const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const C=window.APP_CONFIG||{};
+const TYPES={voucher:'വൗച്ചർ',gift:'ഫ്രീ ഗിഫ്റ്റ്',bumper:'ബംപർ സമ്മാനം'};
+const ERR={
+  BRANCH_PIN:'PIN ശരിയല്ല, അല്ലെങ്കിൽ ബ്രാഞ്ച് ഓഫ് ആക്കിയിരിക്കുന്നു.',
+  CAMPAIGN_OFF:'ഇപ്പോൾ സ്ക്രാച്ച് & വിൻ ഓഫർ നടക്കുന്നില്ല.',
+  BILL_EMPTY:'ബിൽ നമ്പർ അടിക്കുക.',
+  MIN_BILL:'ഈ ബിൽ തുകയ്ക്ക് സ്ക്രാച്ച് ഇല്ല. മിനിമം ബിൽ തുക നോക്കുക.',
+  NAME_EMPTY:'കസ്റ്റമറുടെ പേര് അടിക്കുക.',
+  MOBILE_BAD:'ശരിയായ 10 അക്ക മൊബൈൽ നമ്പർ അടിക്കുക.',
+  BILL_USED:'ഈ ബിൽ നമ്പറിന് ഇതിനകം സ്ക്രാച്ച് ചെയ്തിട്ടുണ്ട്.',
+  MOBILE_TODAY:'ഈ മൊബൈൽ നമ്പർ ഇന്ന് ഒരു തവണ സ്ക്രാച്ച് ചെയ്തു കഴിഞ്ഞു.',
+  NO_PRIZE:'സമ്മാനങ്ങൾ സെറ്റ് ചെയ്തിട്ടില്ല. ഹെഡ് ഓഫീസിനെ വിളിക്കുക.',
+  NOT_REDEEMABLE:'ഈ കൂപ്പൺ റിഡീം ചെയ്യാൻ പറ്റില്ല (ഉപയോഗിച്ചതോ കാലാവധി കഴിഞ്ഞതോ ആണ്).'
+};
+const errText=e=>{const m=(e&&e.message)||'';for(const k in ERR)if(m.includes(k))return ERR[k];
+  return /fetch|network|Failed/i.test(m)?'ഇന്റർനെറ്റ് കണക്ഷൻ പ്രശ്നം. ഒന്നുകൂടി ശ്രമിക്കുക.':'എന്തോ പ്രശ്നം: '+m};
+const fmtD=s=>{if(!s)return'';const [y,m,d]=String(s).slice(0,10).split('-');return `${d}/${m}/${y}`};
+const rupee=n=>'₹'+Number(n||0).toLocaleString('en-IN');
+const store={get(k){try{return JSON.parse(localStorage.getItem('sw-'+k))}catch(e){return null}},set(k,v){try{localStorage.setItem('sw-'+k,JSON.stringify(v))}catch(e){}},del(k){try{localStorage.removeItem('sw-'+k)}catch(e){}}};
+
+$('brand').textContent=C.BRAND||'Atlas Maharani';
+const configured=C.SUPABASE_URL&&!C.SUPABASE_URL.includes('YOUR-PROJECT')&&C.SUPABASE_ANON_KEY&&!C.SUPABASE_ANON_KEY.includes('PASTE')&&window.supabase;
+const sb=configured?window.supabase.createClient(C.SUPABASE_URL,C.SUPABASE_ANON_KEY,{auth:{persistSession:false}}):null;
+let sess=store.get('session'); // {pin, branch, campaign, min_bill}
+let cur=null;
+
+function view(v){
+  ['login','scratch','redeem','config'].forEach(x=>{$('v-'+x).hidden=x!==v});
+  document.querySelectorAll('#tabs button').forEach(b=>b.setAttribute('aria-selected',b.dataset.v===v));
+}
+function boot(){
+  if(!configured){view('config');return}
+  if(!sess){$('who').hidden=true;$('tabs').hidden=true;$('campLbl').textContent='';view('login');$('pin').focus();return}
+  $('who').hidden=false;$('tabs').hidden=false;$('brLbl').textContent=sess.branch;
+  $('campLbl').textContent=`${sess.campaign} · മിനിമം ബിൽ ${rupee(sess.min_bill)}`;
+  $('minNote').textContent=`${rupee(sess.min_bill)}-ന് മുകളിലുള്ള ബില്ലിന് മാത്രം. ഒരു ബില്ലിന് ഒരു സ്ക്രാച്ച്.`;
+  view('scratch');
+  // refresh campaign info quietly
+  sb.rpc('branch_login',{p_pin:sess.pin}).then(({data,error})=>{
+    if(error&&String(error.message).includes('BRANCH_PIN')){store.del('session');sess=null;boot();return}
+    if(data){Object.assign(sess,data);store.set('session',sess);$('campLbl').textContent=`${sess.campaign} · മിനിമം ബിൽ ${rupee(sess.min_bill)}`;$('minNote').textContent=`${rupee(sess.min_bill)}-ന് മുകളിലുള്ള ബില്ലിന് മാത്രം. ഒരു ബില്ലിന് ഒരു സ്ക്രാച്ച്.`}
+  });
+}
+document.querySelectorAll('#tabs button').forEach(b=>b.addEventListener('click',()=>view(b.dataset.v)));
+
+$('loginForm').addEventListener('submit',async e=>{
+  e.preventDefault();const pin=$('pin').value.trim();
+  if(!/^\d{6}$/.test(pin)){$('loginErr').textContent='6 അക്ക PIN അടിക്കുക.';return}
+  $('loginErr').textContent='';
+  const {data,error}=await sb.rpc('branch_login',{p_pin:pin});
+  if(error){$('loginErr').textContent=errText(error);return}
+  sess={pin,...data};store.set('session',sess);$('pin').value='';boot();
+});
+$('logout').addEventListener('click',()=>{store.del('session');sess=null;boot()});
+
+/* ---------- scratch ---------- */
+$('entry').addEventListener('submit',async e=>{
+  e.preventDefault();
+  const bill=$('fBill').value.trim(),amt=Number($('fAmt').value),name=$('fName').value.trim(),mob=$('fMob').value.replace(/\D/g,'');
+  const err=m=>{$('fErr').textContent=m};
+  if(!bill)return err(ERR.BILL_EMPTY);
+  if(!amt)return err('ബിൽ തുക അടിക്കുക.');
+  if(amt<Number(sess.min_bill))return err(`ഈ ബിൽ ${rupee(amt)} ആണ്. സ്ക്രാച്ചിന് മിനിമം ${rupee(sess.min_bill)} വേണം.`);
+  if(!name)return err(ERR.NAME_EMPTY);
+  if(!/^[6-9]\d{9}$/.test(mob))return err(ERR.MOBILE_BAD);
+  err('');$('goBtn').disabled=true;$('goBtn').textContent='കാത്തിരിക്കൂ…';
+  const {data,error}=await sb.rpc('do_scratch',{p_pin:sess.pin,p_bill:bill,p_amount:amt,p_name:name,p_mobile:mob});
+  $('goBtn').disabled=false;$('goBtn').textContent='സ്ക്രാച്ച് കാർഡ് എടുക്കുക';
+  if(error)return err(errText(error));
+  cur=data;
+  $('entry').hidden=true;$('play').hidden=false;$('res').hidden=true;
+  $('hi').textContent=`${cur.name}, ഗോൾഡ് ഭാഗം വിരൽ കൊണ്ട് ചുരണ്ടൂ!`;
+  $('pName').textContent=cur.prize;$('pType').textContent=TYPES[cur.type]||'';
+  requestAnimationFrame(paintFoil);
+});
+
+const cv=$('cv'),ctx=cv.getContext('2d',{willReadFrequently:true});let drawing=false,moves=0,revealed=false;
+function paintFoil(){
+  const r=cv.getBoundingClientRect(),dpr=devicePixelRatio||1;
+  cv.width=Math.round(r.width*dpr);cv.height=Math.round(r.height*dpr);cv.style.opacity=1;revealed=false;
+  ctx.globalCompositeOperation='source-over';
+  const g=ctx.createLinearGradient(0,0,cv.width,cv.height);
+  g.addColorStop(0,'#f6d47a');g.addColorStop(.45,'#d79b26');g.addColorStop(.55,'#f3cc6a');g.addColorStop(1,'#b97f12');
+  ctx.fillStyle=g;ctx.fillRect(0,0,cv.width,cv.height);
+  ctx.fillStyle='rgba(255,255,255,.18)';
+  for(let x=-cv.height;x<cv.width;x+=26*dpr){ctx.beginPath();ctx.moveTo(x,0);ctx.lineTo(x+cv.height,cv.height);ctx.lineTo(x+cv.height+8*dpr,cv.height);ctx.lineTo(x+8*dpr,0);ctx.fill()}
+  ctx.fillStyle='#5a2a05';ctx.textAlign='center';ctx.textBaseline='middle';
+  ctx.font=`800 ${Math.round(Math.min(cv.width/11,40*dpr))}px "Baloo Chettan 2",sans-serif`;
+  ctx.fillText('ഇവിടെ ചുരണ്ടൂ',cv.width/2,cv.height/2-14*dpr);
+  ctx.font=`600 ${Math.round(16*dpr)}px "Noto Sans Malayalam",sans-serif`;
+  ctx.fillText((C.BRAND||'Atlas Maharani')+' Scratch & Win',cv.width/2,cv.height/2+26*dpr);
+}
+function cleared(){const d=ctx.getImageData(0,0,cv.width,cv.height).data;let c=0,n=0;for(let i=3;i<d.length;i+=160){n++;if(d[i]<20)c++}return c/n}
+function scratchAt(e){
+  const r=cv.getBoundingClientRect(),dpr=cv.width/r.width;
+  ctx.globalCompositeOperation='destination-out';ctx.beginPath();
+  ctx.arc((e.clientX-r.left)*dpr,(e.clientY-r.top)*dpr,26*dpr,0,Math.PI*2);ctx.fill();
+  if(++moves%10===0&&cleared()>.45)reveal();
+}
+cv.addEventListener('pointerdown',e=>{if(revealed)return;drawing=true;cv.setPointerCapture(e.pointerId);scratchAt(e)});
+cv.addEventListener('pointermove',e=>{if(drawing&&!revealed)scratchAt(e)});
+['pointerup','pointercancel'].forEach(t=>cv.addEventListener(t,()=>{drawing=false;if(!revealed&&cleared()>.45)reveal()}));
+$('revealAll').addEventListener('click',reveal);
+function reveal(){
+  if(revealed||!cur)return;revealed=true;cv.style.opacity=0;setTimeout(()=>ctx.clearRect(0,0,cv.width,cv.height),650);confetti();
+  $('rType').textContent=TYPES[cur.type]||'';$('rCode').textContent=cur.code;$('rExp').textContent=`കാലാവധി: ${fmtD(cur.expires_on)} വരെ`;
+  const how=cur.type==='voucher'?'അടുത്ത പർച്ചേസിന് ഈ കോഡ് കാണിക്കൂ.':'ഷോപ്പ് കൗണ്ടറിൽ ഈ കോഡ് കാണിച്ച് സമ്മാനം വാങ്ങാം.';
+  const msg=`ഹായ് ${cur.name},\n${C.BRAND||'Atlas Maharani'} ${cur.campaign} സ്ക്രാച്ച് & വിന്നിൽ നിങ്ങൾക്ക് ${cur.prize} കിട്ടി!\nകൂപ്പൺ കോഡ്: ${cur.code}\n${how}\nകാലാവധി: ${fmtD(cur.expires_on)} വരെ.\nനന്ദി, വീണ്ടും വരിക! – ${cur.branch}`;
+  $('rMsg').textContent=msg;
+  $('waBtn').href=`https://wa.me/91${cur.mobile}?text=${encodeURIComponent(msg)}`;
+  $('res').hidden=false;
+}
+function confetti(){
+  if(matchMedia('(prefers-reduced-motion: reduce)').matches)return;
+  const cols=['#e2ad37','#741233','#ffffff','#f3cc6a','#1d8a4b'];
+  for(let i=0;i<70;i++){const s=document.createElement('span');s.className='confetti';s.style.left=Math.random()*100+'vw';s.style.background=cols[i%cols.length];s.style.animationDelay=Math.random()*.5+'s';document.body.appendChild(s);setTimeout(()=>s.remove(),2600)}
+}
+$('next').addEventListener('click',()=>{cur=null;['fBill','fAmt','fName','fMob'].forEach(i=>$(i).value='');$('play').hidden=true;$('entry').hidden=false;$('fBill').focus()});
+addEventListener('resize',()=>{if(!$('play').hidden&&!revealed)paintFoil()});
+
+/* ---------- redeem ---------- */
+$('rdForm').addEventListener('submit',e=>{e.preventDefault();checkCode($('rdCode').value.trim().toUpperCase())});
+async function checkCode(code){
+  const out=$('rdOut');if(!code){out.innerHTML='';return}
+  out.innerHTML='<p class="note">ചെക്ക് ചെയ്യുന്നു…</p>';
+  const {data:s,error}=await sb.rpc('check_coupon',{p_pin:sess.pin,p_code:code});
+  if(error){out.innerHTML=`<p class="err">${esc(errText(error))}</p>`;return}
+  if(!s.found){out.innerHTML=`<div class="res"><span class="pill bad">കോഡ് കണ്ടെത്തിയില്ല</span><p>ഈ കോഡ് സിസ്റ്റത്തിൽ ഇല്ല. കസ്റ്റമറുടെ മെസ്സേജ് ഒന്നുകൂടി നോക്കുക.</p></div>`;return}
+  const pill=s.status==='used'?'<span class="pill bad">ഇതിനകം ഉപയോഗിച്ചു</span>':s.expired?'<span class="pill bad">കാലാവധി കഴിഞ്ഞു</span>':'<span class="pill ok">ഉപയോഗിക്കാം</span>';
+  const act=s.type==='voucher'?'റിഡീം ചെയ്തു എന്ന് മാർക്ക് ചെയ്യുക':'ഗിഫ്റ്റ് കൊടുത്തു എന്ന് മാർക്ക് ചെയ്യുക';
+  out.innerHTML=`<div class="res">${pill}
+    <div class="big" style="font-size:30px;margin:10px 0 4px">${esc(s.prize)}</div>
+    <table><tbody>
+    <tr><th>കസ്റ്റമർ</th><td>${esc(s.name)} · ${esc(s.mobile)}</td></tr>
+    <tr><th>സ്ക്രാച്ച് ചെയ്തത്</th><td>${esc(s.branch)} · ${fmtD(s.day)} · ബിൽ ${esc(s.bill)}</td></tr>
+    <tr><th>കാലാവധി</th><td>${fmtD(s.expires_on)} വരെ</td></tr>
+    ${s.status==='used'?`<tr><th>ഉപയോഗിച്ചത്</th><td>${esc(s.used_branch)} · ${fmtD(s.used_at)}</td></tr>`:''}
+    </tbody></table>
+    ${s.status==='new'&&!s.expired?`<button class="btn w" id="doRedeem" type="button">${act}</button>`:''}
+    <p class="err" id="rdErr"></p></div>`;
+  const b=$('doRedeem');
+  if(b)b.addEventListener('click',async()=>{b.disabled=true;
+    const {error}=await sb.rpc('redeem_coupon',{p_pin:sess.pin,p_code:code});
+    if(error){$('rdErr').textContent=errText(error);b.disabled=false;return}
+    checkCode(code)});
+}
+
+boot();
+}
+</script>
+</body>
+</html>

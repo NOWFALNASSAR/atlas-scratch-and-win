@@ -1,0 +1,56 @@
+:root{color-scheme:light;--bg:#fff;--ink:#24141a;--mut:#6f5a62;--mar:#741233;--mar2:#4e0b22;--gold:#e2ad37;--gold2:#b97f12;--line:#ecdfe3;--card:#fbf5f6;--ok:#1d8a4b;--bad:#c0392b}
+*{box-sizing:border-box;min-width:0}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.55 "Noto Sans Malayalam",system-ui,sans-serif;overflow-x:clip}
+h1,h2,h3,.big{font-family:"Baloo Chettan 2","Noto Sans Malayalam",sans-serif;line-height:1.1;margin:0}
+h2{font-size:26px;margin-bottom:12px}h3{font-size:19px;margin:0 0 10px}
+header{background:var(--mar);color:#fff;padding:18px max(5vw,16px) 0}
+.top{display:flex;flex-wrap:wrap;gap:12px 20px;align-items:center;justify-content:space-between;padding-bottom:16px}
+.top h1{font-size:28px}.top h1 b{color:var(--gold)}
+.top small{display:block;font-size:14px;opacity:.85}
+.top .who{font-size:14px;display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.top .who button{background:none;border:1px solid #ffffff66;color:#fff;border-radius:8px;padding:6px 12px;cursor:pointer;font:inherit;min-height:36px}
+nav{display:flex;gap:4px;overflow-x:auto}
+nav button{background:none;border:0;color:#ffffffcc;font:600 16px "Noto Sans Malayalam",sans-serif;padding:12px 18px;border-radius:10px 10px 0 0;cursor:pointer;min-height:44px;flex:none}
+nav button[aria-selected=true]{background:var(--bg);color:var(--ink)}
+main{max-width:1100px;margin:0 auto;padding:clamp(20px,4vw,44px) max(5vw,16px)}
+[hidden]{display:none!important}
+.col{max-width:560px;margin:0 auto}
+label{display:block;font-size:14px;color:var(--mut);margin:12px 0 4px}
+input,select{font:16px "Noto Sans Malayalam",sans-serif;padding:10px 12px;border:1px solid var(--line);border-radius:10px;background:var(--bg);color:var(--ink);width:100%;min-height:44px}
+input:focus-visible,select:focus-visible,button:focus-visible{outline:3px solid var(--gold);outline-offset:2px}
+.row2{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:12px}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;background:var(--mar);color:#fff;border:0;border-radius:12px;padding:12px 20px;font:700 17px "Noto Sans Malayalam",sans-serif;cursor:pointer;min-height:48px;text-decoration:none}
+.btn.gold{background:var(--gold);color:#3a1405}.btn.ghost{background:none;color:var(--ink);border:1px solid var(--line)}
+.btn.wa{background:#1fa855}
+.btn.sm{font-size:14px;padding:8px 14px;min-height:40px}.btn.w{width:100%;margin-top:18px}
+.btn:disabled{opacity:.55;cursor:wait}
+.err{color:var(--bad);font-weight:600;min-height:24px;margin-top:10px}
+.okmsg{color:var(--ok);font-weight:600}
+.note{font-size:13px;color:var(--mut)}
+.sc{position:relative;aspect-ratio:3/2;border-radius:22px;overflow:hidden;background:radial-gradient(circle at 30% 20%,#9b1d47,var(--mar2));color:#fff;box-shadow:0 18px 40px -18px #4e0b22aa;user-select:none;touch-action:none}
+.sc .face{position:absolute;inset:0;display:grid;place-content:center;text-align:center;padding:20px}
+.sc .face .big{font-size:clamp(30px,8vw,46px);color:var(--gold)}
+.sc .face .t{font-size:15px;opacity:.85;margin-top:6px}
+.sc canvas{position:absolute;inset:0;width:100%;height:100%;cursor:grab;transition:opacity .6s}
+.hi{font-size:18px;margin:0 0 12px;text-align:center}
+.res{margin-top:18px;padding:18px;border:1px solid var(--line);border-radius:16px;background:var(--card)}
+.code{font:800 28px "Baloo Chettan 2",monospace;letter-spacing:2px;color:var(--mar)}
+.msg{white-space:pre-wrap;font-size:14px;background:var(--bg);border:1px dashed var(--line);border-radius:10px;padding:10px;margin:10px 0}
+.pill{display:inline-block;font-size:13px;font-weight:600;padding:3px 10px;border-radius:99px;background:var(--line)}
+.pill.ok{background:#1d8a4b22;color:var(--ok)}.pill.bad{background:#c0392b22;color:var(--bad)}.pill.g{background:#e2ad3733;color:var(--gold2)}
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin-bottom:20px}
+.kpi{background:var(--mar);color:#fff;border-radius:16px;padding:16px}
+.kpi .big{font-size:clamp(26px,5vw,36px);color:var(--gold)}.kpi span{font-size:14px;opacity:.9}
+.box{border-top:2px solid var(--ink);padding-top:16px;margin-top:34px}
+table{width:100%;border-collapse:collapse;font-size:15px}
+th,td{text-align:left;padding:8px 6px;border-bottom:1px solid var(--line);vertical-align:middle}
+th{font-size:13px;color:var(--mut);font-weight:600}
+td.n,th.n{text-align:right;white-space:nowrap}
+td input,td select{min-height:40px;padding:6px 8px}
+.flex{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
+.warn{color:var(--bad);font-size:14px;font-weight:600}
+.confetti{position:fixed;top:-12px;width:9px;height:14px;z-index:9;pointer-events:none;animation:fall 1.8s ease-in forwards}
+@keyframes fall{to{transform:translateY(105vh) rotate(720deg);opacity:.2}}
+@media(prefers-reduced-motion:reduce){.confetti{display:none}.sc canvas{transition:none}}
+.scroll{overflow-x:auto}
+@media(max-width:600px){.row2{grid-template-columns:minmax(0,1fr)}table{font-size:13px}.stack thead{display:none}.stack tr{display:grid;padding-block:10px;border-bottom:1px solid var(--line)}.stack td{display:flow-root;border:0;padding:3px 0;padding-inline-start:8em;text-align:start}.stack td::before{content:attr(data-l);float:inline-start;width:7.5em;margin-inline-start:-8em;white-space:normal;color:var(--mut)}.stack td:empty{display:none}}
