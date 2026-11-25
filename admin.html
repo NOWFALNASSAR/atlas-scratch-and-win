@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="ml">
+<html lang="en">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
@@ -12,36 +12,36 @@
 <body>
 <header>
   <div class="top">
-    <div><h1><span id="brand">Atlas Maharani</span> · <b>Scratch &amp; Win</b></h1><small>ഹെഡ് ഓഫീസ് അഡ്മിൻ</small></div>
-    <div class="who" id="who" hidden><span id="meLbl"></span><button id="logout" type="button">ലോഗൗട്ട്</button></div>
+    <div><h1><span id="brand">Atlas Maharani</span> · <b>Scratch &amp; Win</b></h1><small>Head Office Admin</small></div>
+    <div class="who" id="who" hidden><span id="meLbl"></span><button id="logout" type="button">Logout</button></div>
   </div>
   <nav role="tablist" id="tabs" hidden>
-    <button role="tab" data-v="dash" aria-selected="true">ഡാഷ്ബോർഡ്</button>
-    <button role="tab" data-v="camp">ക്യാമ്പെയിൻ</button>
-    <button role="tab" data-v="prizes">സമ്മാനങ്ങൾ</button>
-    <button role="tab" data-v="branches">ബ്രാഞ്ചുകൾ</button>
-    <button role="tab" data-v="log">സ്ക്രാച്ച് ലോഗ്</button>
+    <button role="tab" data-v="dash" aria-selected="true">Dashboard</button>
+    <button role="tab" data-v="camp">Campaign</button>
+    <button role="tab" data-v="prizes">Prizes</button>
+    <button role="tab" data-v="branches">Branches</button>
+    <button role="tab" data-v="log">Scratch log</button>
   </nav>
 </header>
 <main>
 <section id="v-login" class="col" hidden>
-  <h2>അഡ്മിൻ ലോഗിൻ</h2>
+  <h2>Admin login</h2>
   <form id="loginForm" novalidate>
-    <label for="email">ഇമെയിൽ</label><input id="email" type="email" autocomplete="username">
-    <label for="pass">പാസ്‌വേഡ്</label><input id="pass" type="password" autocomplete="current-password">
+    <label for="email">Email</label><input id="email" type="email" autocomplete="username">
+    <label for="pass">Password</label><input id="pass" type="password" autocomplete="current-password">
     <div class="err" id="loginErr" role="alert"></div>
-    <button class="btn w" type="submit">ലോഗിൻ</button>
+    <button class="btn w" type="submit">Login</button>
   </form>
 </section>
 
 <section id="v-dash" hidden>
   <div class="flex" style="justify-content:space-between;margin-bottom:14px">
-    <h2 style="margin:0">ഡാഷ്ബോർഡ്</h2>
+    <h2 style="margin:0">Dashboard</h2>
     <div class="flex">
-      <input id="dFrom" type="date" style="width:auto" aria-label="മുതൽ">
-      <input id="dTo" type="date" style="width:auto" aria-label="വരെ">
-      <button class="btn sm" id="dGo" type="button">കാണിക്കുക</button>
-      <button class="btn ghost sm" id="csv" type="button">Excel (CSV) ഡൗൺലോഡ്</button>
+      <input id="dFrom" type="date" style="width:auto" aria-label="From">
+      <input id="dTo" type="date" style="width:auto" aria-label="To">
+      <button class="btn sm" id="dGo" type="button">Show</button>
+      <button class="btn ghost sm" id="csv" type="button">Download Excel (CSV)</button>
     </div>
   </div>
   <p class="note" id="csvMsg"></p>
@@ -50,59 +50,59 @@
 </section>
 
 <section id="v-camp" class="col" hidden>
-  <h2>ക്യാമ്പെയിൻ സെറ്റിംഗ്സ്</h2>
+  <h2>Campaign settings</h2>
   <form id="campForm" novalidate>
-    <label for="cName">ക്യാമ്പെയിൻ പേര്</label><input id="cName">
+    <label for="cName">Campaign name</label><input id="cName">
     <div class="row2">
-      <div><label for="cMin">മിനിമം ബിൽ തുക (₹)</label><input id="cMin" type="number" min="0"></div>
-      <div><label for="cVal">കൂപ്പൺ കാലാവധി (ദിവസം)</label><input id="cVal" type="number" min="1"></div>
-      <div><label for="cStart">തുടങ്ങുന്ന തീയതി</label><input id="cStart" type="date"></div>
-      <div><label for="cEnd">അവസാന തീയതി</label><input id="cEnd" type="date"></div>
-      <div><label for="cOnce">ഒരു മൊബൈലിന് ദിവസം ഒരു സ്ക്രാച്ച്</label><select id="cOnce"><option value="1">അതെ</option><option value="0">വേണ്ട</option></select></div>
-      <div><label for="cActive">ഓഫർ ഓൺ / ഓഫ്</label><select id="cActive"><option value="1">ഓൺ</option><option value="0">ഓഫ്</option></select></div>
+      <div><label for="cMin">Minimum bill amount (₹)</label><input id="cMin" type="number" min="0"></div>
+      <div><label for="cVal">Coupon validity (days)</label><input id="cVal" type="number" min="1"></div>
+      <div><label for="cStart">Start date</label><input id="cStart" type="date"></div>
+      <div><label for="cEnd">End date</label><input id="cEnd" type="date"></div>
+      <div><label for="cOnce">One scratch per mobile per day</label><select id="cOnce"><option value="1">Yes</option><option value="0">No</option></select></div>
+      <div><label for="cActive">Offer on / off</label><select id="cActive"><option value="1">On</option><option value="0">Off</option></select></div>
     </div>
-    <p class="note">തീയതി ഒഴിച്ചിട്ടാൽ ഓഫർ ഓൺ ആയിരിക്കുന്നിടത്തോളം എല്ലാ ദിവസവും നടക്കും.</p>
-    <button class="btn w" type="submit">സേവ് ചെയ്യുക</button>
+    <p class="note">If dates are left empty, the offer runs every day while it is On.</p>
+    <button class="btn w" type="submit">Save</button>
     <p id="campMsg" class="okmsg"></p>
   </form>
 </section>
 
 <section id="v-prizes" hidden>
-  <h2>സമ്മാനങ്ങൾ</h2>
-  <p class="note">മാറ്റം വരുത്തിയാൽ ഉടനെ സേവ് ആകും. "വെയ്റ്റ്" കൂടുന്തോറും ആ സമ്മാനം കിട്ടാനുള്ള ചാൻസ് കൂടും. "ലിമിറ്റ്" = ഓരോ ബ്രാഞ്ചിലും ഒരു ദിവസം പരമാവധി എണ്ണം (0 = അൺലിമിറ്റഡ്). വേണ്ടാത്ത സമ്മാനം "ഓഫ്" ആക്കുക.</p>
+  <h2>Prizes</h2>
+  <p class="note">Changes save instantly. Higher "Weight" = higher chance of winning that prize. "Limit" = maximum per branch per day (0 = unlimited). Turn a prize "Off" if you don't want it.</p>
   <div class="scroll"><table class="stack" id="pzTable"></table></div>
   <div class="warn" id="pzWarn"></div>
-  <button class="btn ghost sm" id="addPz" type="button" style="margin-top:12px">+ സമ്മാനം ചേർക്കുക</button>
+  <button class="btn ghost sm" id="addPz" type="button" style="margin-top:12px">+ Add prize</button>
 </section>
 
 <section id="v-branches" hidden>
-  <h2>ബ്രാഞ്ചുകൾ</h2>
-  <p class="note">ഓരോ ബ്രാഞ്ചിനും വേറെ വേറെ 6 അക്ക PIN കൊടുക്കുക. PIN ബ്രാഞ്ച് മാനേജർക്ക് മാത്രം കൊടുക്കുക. PIN മാറ്റാൻ പുതിയ PIN അടിച്ച് സേവ് ചെയ്യുക; പഴയ PIN ഉടനെ പ്രവർത്തിക്കാതാകും.</p>
+  <h2>Branches</h2>
+  <p class="note">Give each branch a different 6-digit PIN, and share it only with that branch manager. To change a PIN, type the new one and Save; the old PIN stops working immediately.</p>
   <div class="scroll"><table class="stack" id="brList"></table></div>
-  <div class="box"><h3>പുതിയ ബ്രാഞ്ച്</h3>
+  <div class="box"><h3>New branch</h3>
     <form id="brForm" class="flex" novalidate>
-      <input id="brName" placeholder="ബ്രാഞ്ചിന്റെ പേര്" style="flex:2 1 220px">
-      <input id="brPin" placeholder="6 അക്ക PIN" inputmode="numeric" maxlength="6" style="flex:1 1 140px">
-      <button class="btn sm" type="submit">ചേർക്കുക</button>
+      <input id="brName" placeholder="Branch name" style="flex:2 1 220px">
+      <input id="brPin" placeholder="6-digit PIN" inputmode="numeric" maxlength="6" style="flex:1 1 140px">
+      <button class="btn sm" type="submit">Add</button>
     </form>
     <p class="err" id="brErr"></p>
   </div>
 </section>
 
 <section id="v-log" hidden>
-  <h2>സ്ക്രാച്ച് ലോഗ്</h2>
+  <h2>Scratch log</h2>
   <form id="logForm" class="flex" novalidate>
-    <input id="q" placeholder="കോഡ് / മൊബൈൽ / ബിൽ നമ്പർ" style="flex:2 1 220px">
-    <select id="qBr" style="flex:1 1 180px" aria-label="ബ്രാഞ്ച്"></select>
-    <button class="btn sm" type="submit">തിരയുക</button>
+    <input id="q" placeholder="Code / mobile / bill number" style="flex:2 1 220px">
+    <select id="qBr" style="flex:1 1 180px" aria-label="Branch"></select>
+    <button class="btn sm" type="submit">Search</button>
   </form>
-  <p class="note">അവസാനത്തെ 100 എണ്ണം കാണിക്കുന്നു.</p>
+  <p class="note">Showing the latest 100.</p>
   <table class="stack" id="logTable"></table>
 </section>
 
 <section id="v-config" class="col" hidden>
-  <h2>സെറ്റപ്പ് പൂർത്തിയായിട്ടില്ല</h2>
-  <p>config.js ഫയലിൽ Supabase URL-ഉം anon key-ഉം ഇട്ടിട്ടില്ല. സെറ്റപ്പ് ഗൈഡിലെ സ്റ്റെപ്പ് 4 നോക്കുക.</p>
+  <h2>Setup not complete</h2>
+  <p>Supabase URL and anon key are not set in config.js. See step 4 of the setup guide.</p>
 </section>
 </main>
 
@@ -112,13 +112,13 @@
 {
 const $=id=>document.getElementById(id);
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-const C=window.APP_CONFIG||{};
-const TYPES={voucher:'വൗച്ചർ',gift:'ഫ്രീ ഗിഫ്റ്റ്',bumper:'ബംപർ'};
+const C=window.APP_CONFIG||{};if(C.SUPABASE_URL)C.SUPABASE_URL=C.SUPABASE_URL.trim().replace(/\/(rest|auth)\/v1\/?$/,'').replace(/\/+$/,'');
+const TYPES={voucher:'Voucher',gift:'Free gift',bumper:'Bumper'};
 const fmtD=s=>{if(!s)return'';const [y,m,d]=String(s).slice(0,10).split('-');return `${d}/${m}/${y}`};
 const rupee=n=>'₹'+Number(n||0).toLocaleString('en-IN');
 const today=()=>new Date().toLocaleDateString('en-CA',{timeZone:'Asia/Kolkata'});
-const ERR={PIN_TAKEN:'ഈ PIN വേറെ ബ്രാഞ്ചിന് ഉണ്ട്. വേറെ PIN കൊടുക്കുക.',PIN_FORMAT:'PIN 6 അക്കം (നമ്പർ മാത്രം) ആയിരിക്കണം.',NAME_EMPTY:'പേര് അടിക്കുക.',NOT_ADMIN:'വീണ്ടും ലോഗിൻ ചെയ്യുക.'};
-const errText=e=>{const m=(e&&e.message)||'';for(const k in ERR)if(m.includes(k))return ERR[k];if(m.includes('duplicate')&&m.includes('name'))return 'ഈ പേരിൽ ബ്രാഞ്ച് ഉണ്ട്.';return 'പ്രശ്നം: '+m};
+const ERR={PIN_TAKEN:'Another branch already uses this PIN. Choose a different PIN.',PIN_FORMAT:'PIN must be 6 digits (numbers only).',NAME_EMPTY:'Enter a name.',NOT_ADMIN:'Please log in again.'};
+const errText=e=>{const m=(e&&e.message)||'';for(const k in ERR)if(m.includes(k))return ERR[k];if(m.includes('duplicate')&&m.includes('name'))return 'A branch with this name already exists.';return 'Problem: '+m};
 
 $('brand').textContent=C.BRAND||'Atlas Maharani';
 const configured=C.SUPABASE_URL&&!C.SUPABASE_URL.includes('YOUR-PROJECT')&&C.SUPABASE_ANON_KEY&&!C.SUPABASE_ANON_KEY.includes('PASTE')&&window.supabase;
@@ -142,14 +142,19 @@ async function boot(){
 $('loginForm').addEventListener('submit',async e=>{
   e.preventDefault();$('loginErr').textContent='';
   const {error}=await sb.auth.signInWithPassword({email:$('email').value.trim(),password:$('pass').value});
-  if(error){$('loginErr').textContent='ഇമെയിൽ അല്ലെങ്കിൽ പാസ്‌വേഡ് ശരിയല്ല.';return}
+  if(error){const m=error.message||'';
+    $('loginErr').textContent=/confirm/i.test(m)?'This user is not confirmed. Confirm it in Supabase → Authentication → Users. ('+m+')'
+      :/invalid login/i.test(m)?'Wrong email or password. ('+m+')'
+      :/api key|apikey|jwt/i.test(m)?'Supabase key is wrong. Check SUPABASE_ANON_KEY and redeploy. ('+m+')'
+      :/fetch|network/i.test(m)?'Cannot connect to Supabase. Check SUPABASE_URL and whether the project is paused. ('+m+')'
+      :'Login failed: '+m;return}
   $('pass').value='';boot();
 });
 $('logout').addEventListener('click',async()=>{await sb.auth.signOut();boot()});
 
 async function loadBranchList(){
   const {data}=await sb.from('branches').select('id,name,active').order('name');branches=data||[];
-  $('qBr').innerHTML='<option value="">എല്ലാ ബ്രാഞ്ചും</option>'+branches.map(b=>`<option value="${b.id}">${esc(b.name)}</option>`).join('');
+  $('qBr').innerHTML='<option value="">All branches</option>'+branches.map(b=>`<option value="${b.id}">${esc(b.name)}</option>`).join('');
 }
 const brName=id=>(branches.find(b=>b.id===id)||{}).name||'';
 
@@ -159,14 +164,14 @@ $('dGo').addEventListener('click',loadDash);
 async function loadDash(){
   const {data:s,error}=await sb.rpc('admin_stats',{p_from:$('dFrom').value,p_to:$('dTo').value});
   if(error){$('kpis').innerHTML=`<p class="err">${esc(errText(error))}</p>`;return}
-  $('kpis').innerHTML=[[s.today,'ഇന്നത്തെ സ്ക്രാച്ച്'],[s.total,'ഈ കാലയളവിൽ'],[s.total?Math.round(s.used/s.total*100)+'%':'0%','കൂപ്പൺ തിരിച്ചു വന്നത്'],[s.customers,'കസ്റ്റമർ നമ്പറുകൾ'],[s.gifts,'ഗിഫ്റ്റ് / ബംപർ'],[rupee(s.bill_total),'ബിൽ തുക']]
+  $('kpis').innerHTML=[[s.today,"Today's scratches"],[s.total,'In this period'],[s.total?Math.round(s.used/s.total*100)+'%':'0%','Coupons redeemed'],[s.customers,'Customer numbers'],[s.gifts,'Gifts / bumpers'],[rupee(s.bill_total),'Bill amount']]
     .map(([v,l])=>`<div class="kpi"><div class="big">${esc(v)}</div><span>${l}</span></div>`).join('');
-  $('brTable').innerHTML=`<thead><tr><th>ബ്രാഞ്ച്</th><th class="n">ഇന്ന്</th><th class="n">ആകെ</th><th class="n">ഗിഫ്റ്റ്</th><th class="n">ബംപർ</th><th class="n">റിഡീം</th><th class="n">ബിൽ തുക</th></tr></thead><tbody>`+
+  $('brTable').innerHTML=`<thead><tr><th>Branch</th><th class="n">Today</th><th class="n">Total</th><th class="n">Gifts</th><th class="n">Bumper</th><th class="n">Redeemed</th><th class="n">Bill amount</th></tr></thead><tbody>`+
     (s.branches.length?s.branches.map(b=>`<tr><td>${esc(b.name)}</td><td class="n">${b.today}</td><td class="n">${b.total}</td><td class="n">${b.gifts}</td><td class="n">${b.bumpers}</td><td class="n">${b.redeemed}</td><td class="n">${rupee(b.bill_total)}</td></tr>`).join('')
-    :'<tr><td colspan="7">ബ്രാഞ്ചുകൾ ചേർത്തിട്ടില്ല. "ബ്രാഞ്ചുകൾ" ടാബിൽ പോയി ചേർക്കുക.</td></tr>')+'</tbody>';
+    :'<tr><td colspan="7">No branches yet. Add them in the "Branches" tab.</td></tr>')+'</tbody>';
 }
 $('csv').addEventListener('click',async()=>{
-  $('csvMsg').textContent='ഡാറ്റ എടുക്കുന്നു…';let rows=[],from=0;
+  $('csvMsg').textContent='Fetching data…';let rows=[],from=0;
   while(true){
     const {data,error}=await sb.from('scratches').select('*').gte('day',$('dFrom').value).lte('day',$('dTo').value).order('id').range(from,from+999);
     if(error){$('csvMsg').textContent=errText(error);return}
@@ -177,7 +182,7 @@ $('csv').addEventListener('click',async()=>{
     .concat(rows.map(s=>[s.day,new Date(s.created_at).toLocaleTimeString('en-IN',{timeZone:'Asia/Kolkata'}),brName(s.branch_id),s.bill_no,s.amount,s.customer_name,s.mobile,s.prize_name,s.prize_type,s.code,s.expires_on,s.status,brName(s.used_branch_id),s.used_at?String(s.used_at).slice(0,10):''].map(q).join(','))).join('\r\n');
   const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv;charset=utf-8'}));
   a.download=`scratch-win_${$('dFrom').value}_to_${$('dTo').value}.csv`;document.body.appendChild(a);a.click();a.remove();
-  $('csvMsg').textContent=`${rows.length} വരി ഡൗൺലോഡ് ചെയ്തു.`;
+  $('csvMsg').textContent=`${rows.length} rows downloaded.`;
 });
 
 /* ---------- campaign ---------- */
@@ -191,7 +196,7 @@ $('campForm').addEventListener('submit',async e=>{
   const row={name:$('cName').value.trim()||'Scratch & Win',min_bill:Math.max(0,Number($('cMin').value)||0),validity_days:Math.max(1,Number($('cVal').value)||30),
     start_date:$('cStart').value||null,end_date:$('cEnd').value||null,once_per_day:$('cOnce').value==='1',active:$('cActive').value==='1'};
   const {error}=await sb.from('campaign').update(row).eq('id',1);
-  $('campMsg').className=error?'err':'okmsg';$('campMsg').textContent=error?errText(error):'സേവ് ആയി. ടാബുകളിൽ അടുത്ത തവണ തുറക്കുമ്പോൾ പുതിയ സെറ്റിംഗ്സ് വരും.';
+  $('campMsg').className=error?'err':'okmsg';$('campMsg').textContent=error?errText(error):'Saved. Tablets will pick up the new settings the next time they open.';
 });
 
 /* ---------- prizes ---------- */
@@ -201,41 +206,41 @@ async function loadPrizes(){
     sb.from('scratches').select('prize_id').eq('day',today()).limit(10000)]);
   prizes=p||[];const given={};(t||[]).forEach(x=>{given[x.prize_id]=(given[x.prize_id]||0)+1});
   const tot=prizes.filter(x=>x.active).reduce((a,x)=>a+Number(x.weight),0)||1;
-  $('pzTable').innerHTML=`<thead><tr><th>സമ്മാനം</th><th>തരം</th><th class="n">വെയ്റ്റ്</th><th class="n">ചാൻസ്</th><th class="n">ലിമിറ്റ്/ദിവസം</th><th class="n">ഇന്ന് പോയത് (എല്ലാ ബ്രാഞ്ചും)</th><th>ഓൺ/ഓഫ്</th></tr></thead><tbody>`+
-    prizes.map(x=>`<tr><td><input data-id="${x.id}" data-k="name" value="${esc(x.name)}" aria-label="സമ്മാനം"></td>
-     <td><select data-id="${x.id}" data-k="type" aria-label="തരം">${Object.entries(TYPES).map(([k,v])=>`<option value="${k}"${k===x.type?' selected':''}>${v}</option>`).join('')}</select></td>
-     <td class="n"><input data-id="${x.id}" data-k="weight" type="number" min="0" step="0.5" value="${esc(x.weight)}" style="width:90px" aria-label="വെയ്റ്റ്"></td>
+  $('pzTable').innerHTML=`<thead><tr><th>Prize</th><th>Type</th><th class="n">Weight</th><th class="n">Chance</th><th class="n">Limit/day</th><th class="n">Given today (all branches)</th><th>On/Off</th></tr></thead><tbody>`+
+    prizes.map(x=>`<tr><td><input data-id="${x.id}" data-k="name" value="${esc(x.name)}" aria-label="Prize"></td>
+     <td><select data-id="${x.id}" data-k="type" aria-label="Type">${Object.entries(TYPES).map(([k,v])=>`<option value="${k}"${k===x.type?' selected':''}>${v}</option>`).join('')}</select></td>
+     <td class="n"><input data-id="${x.id}" data-k="weight" type="number" min="0" step="0.5" value="${esc(x.weight)}" style="width:90px" aria-label="Weight"></td>
      <td class="n">${x.active?(Number(x.weight)/tot*100).toFixed(1)+'%':'–'}</td>
-     <td class="n"><input data-id="${x.id}" data-k="daily_limit" type="number" min="0" value="${esc(x.daily_limit)}" style="width:90px" aria-label="ലിമിറ്റ്"></td>
+     <td class="n"><input data-id="${x.id}" data-k="daily_limit" type="number" min="0" value="${esc(x.daily_limit)}" style="width:90px" aria-label="Limit"></td>
      <td class="n">${given[x.id]||0}</td>
-     <td><select data-id="${x.id}" data-k="active" aria-label="ഓൺ/ഓഫ്"><option value="1"${x.active?' selected':''}>ഓൺ</option><option value="0"${x.active?'':' selected'}>ഓഫ്</option></select></td></tr>`).join('')+'</tbody>';
-  $('pzWarn').textContent=prizes.some(x=>x.active&&Number(x.weight)>0&&!Number(x.daily_limit))?'':'കുറഞ്ഞത് ഒരു സമ്മാനം ലിമിറ്റ് 0 (അൺലിമിറ്റഡ്) ആയി ഓൺ ചെയ്തിരിക്കണം.';
+     <td><select data-id="${x.id}" data-k="active" aria-label="On/Off"><option value="1"${x.active?' selected':''}>On</option><option value="0"${x.active?'':' selected'}>Off</option></select></td></tr>`).join('')+'</tbody>';
+  $('pzWarn').textContent=prizes.some(x=>x.active&&Number(x.weight)>0&&!Number(x.daily_limit))?'':'At least one prize must be On with limit 0 (unlimited).';
 }
 $('pzTable').addEventListener('change',async e=>{
   const t=e.target,id=t.dataset.id,k=t.dataset.k;if(!id)return;
-  let v=t.value;if(k==='weight'||k==='daily_limit')v=Math.max(0,Number(v)||0);if(k==='active')v=v==='1';if(k==='name')v=v.trim()||'സമ്മാനം';
+  let v=t.value;if(k==='weight'||k==='daily_limit')v=Math.max(0,Number(v)||0);if(k==='active')v=v==='1';if(k==='name')v=v.trim()||'Prize';
   const {error}=await sb.from('prizes').update({[k]:v}).eq('id',id);
   if(error)$('pzWarn').textContent=errText(error);else loadPrizes();
 });
 $('addPz').addEventListener('click',async()=>{
-  const {error}=await sb.from('prizes').insert({name:'പുതിയ സമ്മാനം',type:'gift',weight:1,daily_limit:5,sort:prizes.length+1});
+  const {error}=await sb.from('prizes').insert({name:'New prize',type:'gift',weight:1,daily_limit:5,sort:prizes.length+1});
   if(error)$('pzWarn').textContent=errText(error);else loadPrizes();
 });
 
 /* ---------- branches ---------- */
 async function loadBranches(){
   await loadBranchList();
-  $('brList').innerHTML=`<thead><tr><th>ബ്രാഞ്ച്</th><th>ഓൺ/ഓഫ്</th><th>പുതിയ PIN (മാറ്റാൻ മാത്രം)</th><th></th></tr></thead><tbody>`+
-    (branches.length?branches.map(b=>`<tr><td><input id="bn${b.id}" value="${esc(b.name)}" aria-label="പേര്"></td>
-      <td><select id="ba${b.id}" aria-label="ഓൺ/ഓഫ്"><option value="1"${b.active?' selected':''}>ഓൺ</option><option value="0"${b.active?'':' selected'}>ഓഫ്</option></select></td>
-      <td><input id="bp${b.id}" inputmode="numeric" maxlength="6" placeholder="••••••" aria-label="പുതിയ PIN"></td>
-      <td><button class="btn sm" data-save="${b.id}" type="button">സേവ്</button> <span class="note" id="bm${b.id}"></span></td></tr>`).join('')
-    :'<tr><td colspan="4">ഇതുവരെ ബ്രാഞ്ച് ഇല്ല. താഴെ ചേർക്കുക.</td></tr>')+'</tbody>';
+  $('brList').innerHTML=`<thead><tr><th>Branch</th><th>On/Off</th><th>New PIN (only to change)</th><th></th></tr></thead><tbody>`+
+    (branches.length?branches.map(b=>`<tr><td><input id="bn${b.id}" value="${esc(b.name)}" aria-label="Name"></td>
+      <td><select id="ba${b.id}" aria-label="On/Off"><option value="1"${b.active?' selected':''}>On</option><option value="0"${b.active?'':' selected'}>Off</option></select></td>
+      <td><input id="bp${b.id}" inputmode="numeric" maxlength="6" placeholder="••••••" aria-label="New PIN"></td>
+      <td><button class="btn sm" data-save="${b.id}" type="button">Save</button> <span class="note" id="bm${b.id}"></span></td></tr>`).join('')
+    :'<tr><td colspan="4">No branches yet. Add one below.</td></tr>')+'</tbody>';
 }
 $('brList').addEventListener('click',async e=>{
   const id=e.target.dataset.save;if(!id)return;
   const {error}=await sb.rpc('admin_save_branch',{p_id:Number(id),p_name:$('bn'+id).value,p_pin:$('bp'+id).value.trim()||null,p_active:$('ba'+id).value==='1'});
-  $('bm'+id).textContent=error?errText(error):'സേവ് ആയി';if(!error){$('bp'+id).value='';loadBranchList()}
+  $('bm'+id).textContent=error?errText(error):'Saved';if(!error){$('bp'+id).value='';loadBranchList()}
 });
 $('brForm').addEventListener('submit',async e=>{
   e.preventDefault();$('brErr').textContent='';
@@ -254,9 +259,9 @@ async function loadLog(){
   const {data,error}=await qr;
   if(error){$('logTable').innerHTML=`<tr><td class="err">${esc(errText(error))}</td></tr>`;return}
   const t=today();
-  $('logTable').innerHTML=`<thead><tr><th>തീയതി</th><th>ബ്രാഞ്ച്</th><th>ബിൽ</th><th class="n">തുക</th><th>കസ്റ്റമർ</th><th>സമ്മാനം</th><th>കോഡ്</th><th>സ്റ്റാറ്റസ്</th></tr></thead><tbody>`+
-    (data.length?data.map(s=>`<tr><td>${fmtD(s.day)}</td><td>${esc(brName(s.branch_id))}</td><td>${esc(s.bill_no)}</td><td class="n">${rupee(s.amount)}</td><td>${esc(s.customer_name)} · ${esc(s.mobile)}</td><td>${esc(s.prize_name)}</td><td>${esc(s.code)}</td><td>${s.status==='used'?'<span class="pill ok">ഉപയോഗിച്ചു</span>':s.expires_on<t?'<span class="pill bad">കാലാവധി കഴിഞ്ഞു</span>':'<span class="pill">പുതിയത്</span>'}</td></tr>`).join('')
-    :'<tr><td colspan="8">ഒന്നും കണ്ടെത്തിയില്ല.</td></tr>')+'</tbody>';
+  $('logTable').innerHTML=`<thead><tr><th>Date</th><th>Branch</th><th>Bill</th><th class="n">Amount</th><th>Customer</th><th>Prize</th><th>Code</th><th>Status</th></tr></thead><tbody>`+
+    (data.length?data.map(s=>`<tr><td>${fmtD(s.day)}</td><td>${esc(brName(s.branch_id))}</td><td>${esc(s.bill_no)}</td><td class="n">${rupee(s.amount)}</td><td>${esc(s.customer_name)} · ${esc(s.mobile)}</td><td>${esc(s.prize_name)}</td><td>${esc(s.code)}</td><td>${s.status==='used'?'<span class="pill ok">Used</span>':s.expires_on<t?'<span class="pill bad">Expired</span>':'<span class="pill">New</span>'}</td></tr>`).join('')
+    :'<tr><td colspan="8">Nothing found.</td></tr>')+'</tbody>';
 }
 
 boot();

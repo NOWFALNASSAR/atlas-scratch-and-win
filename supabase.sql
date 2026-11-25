@@ -16,7 +16,7 @@ create table if not exists public.branches (
 
 create table if not exists public.campaign (
   id             int primary key default 1 check (id = 1),
-  name           text not null default 'ഡിസംബർ മെഗാ സെയിൽ',
+  name           text not null default 'December Mega Sale',
   min_bill       numeric not null default 1000,
   validity_days  int not null default 30,
   once_per_day   boolean not null default true,
@@ -38,14 +38,14 @@ create table if not exists public.prizes (
 
 insert into public.prizes (name, type, weight, daily_limit, sort)
 select * from (values
-  ('₹100 വൗച്ചർ',              'voucher', 45,  0, 1),
-  ('₹200 വൗച്ചർ',              'voucher', 25,  0, 2),
-  ('10% ഡിസ്കൗണ്ട് കൂപ്പൺ',     'voucher', 10,  0, 3),
-  ('ഫ്രീ കർച്ചീഫ്',             'gift',    10, 20, 4),
-  ('ഫ്രീ ടവൽ',                  'gift',     6, 10, 5),
-  ('ഫ്രീ മുണ്ട്',               'gift',     2,  5, 6),
-  ('സിൽവർ കോയിൻ',              'bumper', 1.5, 1, 7),
-  ('₹5000 ഗിഫ്റ്റ് വൗച്ചർ',      'bumper', 0.5, 1, 8)
+  ('₹100 Voucher',              'voucher', 45,  0, 1),
+  ('₹200 Voucher',              'voucher', 25,  0, 2),
+  ('10% Discount Coupon',     'voucher', 10,  0, 3),
+  ('Free Handkerchief',             'gift',    10, 20, 4),
+  ('Free Towel',                  'gift',     6, 10, 5),
+  ('Free Mundu',               'gift',     2,  5, 6),
+  ('Silver Coin',              'bumper', 1.5, 1, 7),
+  ('₹5000 Gift Voucher',      'bumper', 0.5, 1, 8)
 ) v(name, type, weight, daily_limit, sort)
 where not exists (select 1 from public.prizes);
 
