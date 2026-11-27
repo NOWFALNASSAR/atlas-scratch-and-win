@@ -1,5 +1,5 @@
 -- =====================================================================
--- @less fashion Scratch & Win  -  Supabase database (version 5: bill number range, chance slabs, 2nd scratch card)
+-- @less fashion Scratch & Win  -  Supabase database (version 6: gift master with price, purchase entry, Excel-style transfer)
 -- Supabase > SQL Editor > New query > paste this whole file > Run
 -- Safe to run on a new project AND on top of any earlier version (keeps all data).
 -- =====================================================================
@@ -49,6 +49,7 @@ create table if not exists public.items (
   active      boolean not null default true,
   created_at  timestamptz not null default now()
 );
+alter table public.items add column if not exists price numeric not null default 0;   -- v6: unit price (latest purchase price)
 
 create table if not exists public.prizes (
   id           bigint generated always as identity primary key,
@@ -133,6 +134,7 @@ create table if not exists public.stock_moves (
   by_user     text
 );
 create index if not exists stock_moves_loc_idx on public.stock_moves (branch_id, item_id, day);
+alter table public.stock_moves add column if not exists price numeric;   -- v6: unit price of this movement
 
 -- daily closing (v2)
 create table if not exists public.closings (
@@ -390,8 +392,9 @@ begin
   if s.id is null or s.status <> 'new' or s.expires_on < public._today() then raise exception 'NOT_REDEEMABLE'; end if;
   if s.item_id is not null then
     if public._stock(v_branch, s.item_id) < 1 then raise exception 'NO_STOCK'; end if;
-    insert into public.stock_moves (item_id, branch_id, qty, kind, ref, note)
-    values (s.item_id, v_branch, -1, 'issue', s.code, s.prize_name || ' to ' || s.customer_name);
+    insert into public.stock_moves (item_id, branch_id, qty, kind, ref, note, price)
+    values (s.item_id, v_branch, -1, 'issue', s.code, s.prize_name || ' to ' || coalesce(nullif(s.customer_name,''), s.mobile),
+            (select price from public.items where id = s.item_id));
   end if;
   update public.scratches set status = 'used', used_at = now(), used_branch_id = v_branch where id = s.id;
   return json_build_object('ok', true);
@@ -469,8 +472,9 @@ begin
     v_phys := coalesce((p_counts ->> (l->>'item_id'))::numeric, (l->>'closing')::numeric);
     v_diff := v_phys - (l->>'closing')::numeric;
     if v_diff <> 0 then
-      insert into public.stock_moves (item_id, branch_id, qty, kind, ref, note, day)
-      values ((l->>'item_id')::bigint, v_branch, v_diff, 'adjust', 'closing ' || p_day, 'Physical count difference', p_day);
+      insert into public.stock_moves (item_id, branch_id, qty, kind, ref, note, day, price)
+      values ((l->>'item_id')::bigint, v_branch, v_diff, 'adjust', 'closing ' || p_day, 'Physical count difference', p_day,
+              (select price from public.items where id = (l->>'item_id')::bigint));
     end if;
     v_lines := v_lines || jsonb_build_array((l::jsonb) || jsonb_build_object('physical', v_phys, 'difference', v_diff));
   end loop;
@@ -532,11 +536,58 @@ begin
   perform pg_advisory_xact_lock(coalesce(p_from, 0));
   if public._stock(p_from, p_item) < p_qty then raise exception 'NO_STOCK'; end if;
   v_user := lower(auth.jwt() ->> 'email');
-  insert into public.stock_moves (item_id, branch_id, qty, kind, ref, note, by_user)
-  values (p_item, p_from, -p_qty, 'transfer_out', v_ref, nullif(trim(coalesce(p_note,'')),''), v_user),
-         (p_item, p_to,    p_qty, 'transfer_in',  v_ref, nullif(trim(coalesce(p_note,'')),''), v_user);
+  insert into public.stock_moves (item_id, branch_id, qty, kind, ref, note, by_user, price)
+  select p_item, x.b, x.q, x.k, v_ref, nullif(trim(coalesce(p_note,'')),''), v_user, (select price from public.items where id = p_item)
+  from (values (p_from, -p_qty, 'transfer_out'), (p_to, p_qty, 'transfer_in')) x(b, q, k);
   return json_build_object('ok', true, 'ref', v_ref,
     'from_stock', public._stock(p_from, p_item), 'to_stock', public._stock(p_to, p_item));
+end $$;
+
+-- purchase entry with many lines: p_lines = [{"item_id":1,"qty":100,"price":250}, ...]
+create or replace function public.admin_purchase(p_branch bigint, p_lines jsonb, p_note text)
+returns json language plpgsql security definer set search_path = public as $$
+declare v_ref text := 'PU-' || to_char(now() at time zone 'Asia/Kolkata', 'YYMMDD-HH24MISS'); v_user text := lower(auth.jwt() ->> 'email');
+        l jsonb; v_n int := 0; v_val numeric := 0;
+begin
+  if public._role() is distinct from 'admin' then raise exception 'NOT_ADMIN'; end if;
+  if jsonb_typeof(p_lines) <> 'array' or jsonb_array_length(p_lines) = 0 then raise exception 'NO_LINES'; end if;
+  for l in select * from jsonb_array_elements(p_lines) loop
+    if coalesce((l->>'qty')::numeric, 0) <= 0 then raise exception 'QTY_BAD'; end if;
+    if coalesce((l->>'price')::numeric, 0) < 0 then raise exception 'PRICE_BAD'; end if;
+    if not exists (select 1 from public.items where id = (l->>'item_id')::bigint) then raise exception 'ITEM_BAD'; end if;
+    insert into public.stock_moves (item_id, branch_id, qty, kind, ref, note, by_user, price)
+    values ((l->>'item_id')::bigint, p_branch, (l->>'qty')::numeric, 'in', v_ref, nullif(trim(coalesce(p_note,'')),''), v_user, nullif(l->>'price','')::numeric);
+    if nullif(l->>'price','') is not null then update public.items set price = (l->>'price')::numeric where id = (l->>'item_id')::bigint; end if;
+    v_n := v_n + 1; v_val := v_val + (l->>'qty')::numeric * coalesce(nullif(l->>'price','')::numeric, 0);
+  end loop;
+  return json_build_object('ok', true, 'ref', v_ref, 'lines', v_n, 'value', v_val);
+end $$;
+
+-- transfer from one place to many branches at once: p_lines = [{"item_id":1,"to":5,"qty":10}, ...]
+create or replace function public.admin_transfer_batch(p_from bigint, p_lines jsonb, p_note text)
+returns json language plpgsql security definer set search_path = public as $$
+declare v_ref text := 'TR-' || to_char(now() at time zone 'Asia/Kolkata', 'YYMMDD-HH24MISS'); v_user text := lower(auth.jwt() ->> 'email');
+        r record; v_n int := 0;
+begin
+  if public._role() is distinct from 'admin' then raise exception 'NOT_ADMIN'; end if;
+  if jsonb_typeof(p_lines) <> 'array' or jsonb_array_length(p_lines) = 0 then raise exception 'NO_LINES'; end if;
+  perform pg_advisory_xact_lock(coalesce(p_from, 0));
+  -- check every item has enough stock at the source for the total being sent
+  for r in select (x->>'item_id')::bigint item_id, sum((x->>'qty')::numeric) q
+           from jsonb_array_elements(p_lines) x group by 1 loop
+    if public._stock(p_from, r.item_id) < r.q then
+      raise exception 'NO_STOCK %', (select name from public.items where id = r.item_id);
+    end if;
+  end loop;
+  for r in select (x->>'item_id')::bigint item_id, nullif(x->>'to','')::bigint to_b, (x->>'qty')::numeric q from jsonb_array_elements(p_lines) x loop
+    if r.q is null or r.q <= 0 then raise exception 'QTY_BAD'; end if;
+    if r.to_b is not distinct from p_from then raise exception 'SAME_LOCATION'; end if;
+    insert into public.stock_moves (item_id, branch_id, qty, kind, ref, note, by_user, price)
+    select r.item_id, x.b, x.q, x.k, v_ref, nullif(trim(coalesce(p_note,'')),''), v_user, (select price from public.items where id = r.item_id)
+    from (values (p_from, -r.q, 'transfer_out'), (r.to_b, r.q, 'transfer_in')) x(b, q, k);
+    v_n := v_n + 1;
+  end loop;
+  return json_build_object('ok', true, 'ref', v_ref, 'lines', v_n);
 end $$;
 
 -- stock of every item at Head Office and every branch
@@ -545,7 +596,7 @@ returns json language plpgsql security definer set search_path = public as $$
 begin
   if public._role() is null then raise exception 'NO_ROLE'; end if;
   return json_build_object(
-    'items', (select coalesce(json_agg(json_build_object('id',id,'name',name,'unit',unit,'active',active) order by name),'[]'::json) from public.items),
+    'items', (select coalesce(json_agg(json_build_object('id',id,'name',name,'unit',unit,'active',active,'price',price) order by name),'[]'::json) from public.items),
     'stock', (select coalesce(json_agg(json_build_object('item_id',item_id,'branch_id',branch_id,'qty',q)),'[]'::json)
               from (select item_id, branch_id, sum(qty) q from public.stock_moves group by item_id, branch_id) s),
     'pending', (select coalesce(json_agg(json_build_object('item_id',item_id,'branch_id',branch_id,'qty',n)),'[]'::json)
@@ -599,7 +650,7 @@ do $$ declare f text; begin
     execute 'grant execute on function public.' || f || ' to anon, authenticated';
   end loop;
   foreach f in array array['admin_save_branch(bigint,text,text,boolean,numeric,numeric)','admin_stats(date,date)','admin_stock_in(bigint,bigint,numeric,text)',
-                           'admin_transfer(bigint,bigint,bigint,numeric,text)','admin_stock_summary()','admin_closing(bigint,date)','my_role()'] loop
+                           'admin_transfer(bigint,bigint,bigint,numeric,text)','admin_purchase(bigint,jsonb,text)','admin_transfer_batch(bigint,jsonb,text)','admin_stock_summary()','admin_closing(bigint,date)','my_role()'] loop
     execute 'revoke all on function public.' || f || ' from public, anon';
     execute 'grant execute on function public.' || f || ' to authenticated';
   end loop;

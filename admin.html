@@ -60,41 +60,43 @@
   <div class="flex between"><h2 style="margin:0">Gift stock – all locations</h2>
     <div class="flex"><label for="paper" style="margin:0">Print paper</label><select id="paper" style="width:auto"><option value="80">80 mm</option><option value="58">58 mm</option></select>
     <button class="btn ghost sm" id="stRefresh" type="button">Refresh</button></div></div>
-  <p class="note">Each cell: stock in hand. Small number = won by customers but not collected yet.</p>
+  <p class="note">Each cell: stock in hand. Small orange number = won by customers but not collected yet.</p>
   <div class="scroll"><table id="stMatrix" class="sticky1"></table></div>
 
-  <div class="grid2" style="margin-top:22px">
-    <form class="card" id="inForm" novalidate>
-      <h3>Stock entry (goods received)</h3>
-      <label for="inItem">Item</label><select id="inItem"></select>
-      <label for="inLoc">Received at</label><select id="inLoc"></select>
-      <div class="row2"><div><label for="inQty">Quantity</label><input id="inQty" type="number" min="1" inputmode="numeric"></div>
-      <div><label for="inNote">Note / bill no</label><input id="inNote"></div></div>
-      <button class="btn w" type="submit">Add stock</button>
-      <p class="err" id="inMsg"></p>
-    </form>
-    <form class="card" id="trForm" novalidate>
-      <h3>Stock transfer</h3>
-      <label for="trItem">Item</label><select id="trItem"></select>
-      <div class="row2"><div><label for="trFrom">From</label><select id="trFrom"></select></div><div><label for="trTo">To</label><select id="trTo"></select></div></div>
-      <div class="row2"><div><label for="trQty">Quantity</label><input id="trQty" type="number" min="1" inputmode="numeric"></div>
-      <div><label for="trNote">Note</label><input id="trNote"></div></div>
-      <p class="note" id="trAvail"></p>
-      <button class="btn w" type="submit">Transfer &amp; print slip</button>
-      <p class="err" id="trMsg"></p>
-    </form>
-  </div>
-
-  <div class="box"><h3>Stock items</h3>
-    <form id="itForm" class="flex" novalidate><input id="itName" placeholder="Item name (e.g. Towel)" style="flex:2 1 200px"><input id="itUnit" placeholder="Unit" value="pcs" style="flex:0 1 110px"><button class="btn sm" type="submit">Add item</button></form>
+  <div class="box"><div class="flex between"><h3 style="margin:0">Gift items (master list)</h3></div>
+    <p class="note">Add each gift <b>only here</b>. It then shows everywhere: purchase entry, transfer, prizes (with its % chance), tablets and day closing. Price = cost per piece (updated automatically from the latest purchase).</p>
+    <form id="itForm" class="flex" novalidate><input id="itName" placeholder="Gift name (e.g. Bluetooth Speaker)" style="flex:2 1 220px"><input id="itPrice" type="number" min="0" placeholder="Price ₹" style="flex:0 1 120px"><input id="itUnit" placeholder="Unit" value="pcs" style="flex:0 1 90px"><button class="btn sm" type="submit">Add gift</button></form>
     <p class="err" id="itMsg"></p>
     <table class="stack" id="itTable"></table>
+  </div>
+
+  <div class="box" id="puBox"><h3>Purchase entry (goods received)</h3>
+    <div class="row3">
+      <div><label for="puLoc">Received at</label><select id="puLoc"></select></div>
+      <div><label for="puNote">Supplier / bill no</label><input id="puNote"></div>
+      <div></div>
+    </div>
+    <div class="scroll" style="margin-top:12px"><table id="puTable"></table></div>
+    <div class="flex" style="margin-top:10px"><button class="btn ghost sm" id="puAdd" type="button">+ Add line</button><button class="btn" id="puSave" type="button">Save purchase</button></div>
+    <p class="err" id="puMsg"></p>
+  </div>
+
+  <div class="box" id="trBox"><h3>Stock transfer (type quantities like Excel)</h3>
+    <div class="row3">
+      <div><label for="trFrom">Send from</label><select id="trFrom"></select></div>
+      <div><label for="trNote">Note</label><input id="trNote" placeholder="e.g. December stock"></div>
+      <div></div>
+    </div>
+    <p class="note">Type how many pieces each branch gets. "Balance" shows what will be left at the source after this transfer.</p>
+    <div class="scroll"><table id="trGrid" class="sticky1"></table></div>
+    <div class="flex" style="margin-top:10px"><button class="btn" id="trSave" type="button">Transfer &amp; print slips</button><button class="btn ghost sm" id="trClear" type="button">Clear</button></div>
+    <p class="err" id="trMsg"></p>
   </div>
 
   <div class="box"><div class="flex between"><h3>Stock movements</h3>
     <div class="flex"><select id="mvItem" style="width:auto" aria-label="Item"></select><select id="mvLoc" style="width:auto" aria-label="Location"></select><button class="btn sm" id="mvGo" type="button">Show</button></div></div>
     <p class="note">Latest 200 movements.</p>
-    <table class="stack" id="mvTable"></table>
+    <div class="scroll"><table class="stack" id="mvTable"></table></div>
   </div>
 </section>
 
@@ -267,7 +269,7 @@ function applyLocks(){
   if (!role) return;
   const lock = (sel, on) => document.querySelectorAll(sel).forEach(el => { el.disabled = on; });
   const hide = (ids, on) => ids.forEach(id => { if ($(id)) $(id).hidden = on; });
-  hide(['inForm','trForm','itForm'], !canEdit('stock'));
+  hide(['puBox','trBox','itForm'], !canEdit('stock'));
   lock('#itTable input, #itTable select', !canEdit('stock'));
   lock('#pzTable input, #pzTable select, #pzTable button, #slabTable input, #slabTable button', !canEdit('prizes')); hide(['addPz','addSlab'], !canEdit('prizes'));
   lock('#campForm input, #campForm select, #campForm button', !canEdit('camp'));
@@ -289,14 +291,11 @@ async function loadBranchList(){
   const {data} = await sb.from('branches').select('id,name,active,bill_from,bill_to').order('name'); branches = data || [];
   $('qBr').innerHTML = '<option value="">All branches</option>' + branches.map(b => `<option value="${b.id}">${esc(b.name)}</option>`).join('');
   const locOpts = '<option value="">Head Office</option>' + branches.filter(b => b.active).map(b => `<option value="${b.id}">${esc(b.name)}</option>`).join('');
-  ['inLoc','trFrom','trTo'].forEach(id => { const keep = $(id).value; $(id).innerHTML = locOpts; $(id).value = keep; });
-  if ($('trTo').value === '' && branches.some(b => b.active)) $('trTo').value = String(branches.find(b => b.active).id);
+  ['puLoc','trFrom'].forEach(id => { const keep = $(id).value; $(id).innerHTML = locOpts; $(id).value = keep; });
   $('mvLoc').innerHTML = '<option value="all">All locations</option>' + locOpts;
 }
 async function loadItems(){
   const {data} = await sb.from('items').select('*').order('name'); items = data || [];
-  const opts = items.filter(i => i.active).map(i => `<option value="${i.id}">${esc(i.name)}</option>`).join('');
-  ['inItem','trItem'].forEach(id => { const keep = $(id).value; $(id).innerHTML = opts || '<option value="">Add an item first</option>'; if (keep) $(id).value = keep; });
   $('mvItem').innerHTML = '<option value="">All items</option>' + items.map(i => `<option value="${i.id}">${esc(i.name)}</option>`).join('');
 }
 async function loadCampData(){
@@ -336,6 +335,8 @@ $('csv').addEventListener('click', async () => {
 $('paper').value = store.get('paper') || '80'; $('paper').addEventListener('change', () => store.set('paper', $('paper').value));
 let stockMap = {}, pendMap = {};
 const sk = (i, b) => i + ':' + (b ?? 'ho');
+const locVal = v => v === '' ? null : Number(v);
+const actBranches = () => branches.filter(b => b.active);
 async function loadStock(){
   await Promise.all([loadBranchList(), loadItems()]);
   const {data, error} = await sb.rpc('admin_stock_summary');
@@ -343,57 +344,134 @@ async function loadStock(){
   stockMap = {}; pendMap = {};
   data.stock.forEach(r => stockMap[sk(r.item_id, r.branch_id)] = Number(r.qty));
   data.pending.forEach(r => pendMap[sk(r.item_id, r.branch_id)] = Number(r.qty));
-  const locs = [{id: null, name: 'Head Office'}].concat(branches.filter(b => b.active));
-  $('stMatrix').innerHTML = `<thead><tr><th>Item</th>${locs.map(l => `<th class="n">${esc(l.name)}</th>`).join('')}<th class="n">Total</th></tr></thead><tbody>` +
-    (items.length ? items.filter(i => i.active).map(i => { let tot = 0;
-      return `<tr><td>${esc(i.name)}</td>${locs.map(l => { const q = stockMap[sk(i.id, l.id)] || 0, p = pendMap[sk(i.id, l.id)] || 0; tot += q;
-        return `<td class="n ${q < 0 ? 'neg' : ''}">${num(q)}${p ? ` <span class="pill w" title="won, not collected">${num(p)}</span>` : ''}</td>`; }).join('')}<td class="n b">${num(tot)}</td></tr>`; }).join('')
-    : `<tr><td colspan="${locs.length + 2}">No stock items yet. Add one below.</td></tr>`) + '</tbody>';
-  showAvail(); loadItemTable(); loadMoves();
+  const locs = [{id: null, name: 'Head Office'}].concat(actBranches());
+  let grand = 0;
+  $('stMatrix').innerHTML = `<thead><tr><th>Gift</th>${locs.map(l => `<th class="n">${esc(l.name)}</th>`).join('')}<th class="n">Total qty</th><th class="n">Price</th><th class="n">Value</th></tr></thead><tbody>` +
+    (items.some(i => i.active) ? items.filter(i => i.active).map(i => { let tot = 0;
+      const cells = locs.map(l => { const q = stockMap[sk(i.id, l.id)] || 0, p = pendMap[sk(i.id, l.id)] || 0; tot += q;
+        return `<td class="n ${q < 0 ? 'neg' : ''}">${num(q)}${p ? ` <span class="pill w" title="won, not collected">${num(p)}</span>` : ''}</td>`; }).join('');
+      grand += tot * Number(i.price || 0);
+      return `<tr><td>${esc(i.name)}</td>${cells}<td class="n b">${num(tot)}</td><td class="n">${rupee(i.price)}</td><td class="n">${rupee(tot * Number(i.price || 0))}</td></tr>`; }).join('') +
+      `<tr><td class="b">Total value</td>${locs.map(() => '<td></td>').join('')}<td></td><td></td><td class="n b">${rupee(grand)}</td></tr>`
+    : `<tr><td colspan="${locs.length + 4}">No gifts yet. Add them in the master list below.</td></tr>`) + '</tbody>';
+  loadItemTable(); renderPurchase(); renderGrid(); loadMoves();
 }
 $('stRefresh').addEventListener('click', loadStock);
-function showAvail(){ const i = $('trItem').value; if (!i) { $('trAvail').textContent = ''; return; }
-  $('trAvail').textContent = `Available at ${locName($('trFrom').value)}: ${num(stockMap[sk(i, $('trFrom').value === '' ? null : Number($('trFrom').value))] || 0)}`; }
-['trItem','trFrom'].forEach(id => $(id).addEventListener('change', showAvail));
-const locVal = v => v === '' ? null : Number(v);
-$('inForm').addEventListener('submit', async e => {
-  e.preventDefault(); const m = $('inMsg'); m.className = 'err';
-  if (!$('inItem').value) { m.textContent = 'Add a stock item first.'; return; }
-  const {data, error} = await sb.rpc('admin_stock_in', {p_item: Number($('inItem').value), p_branch: locVal($('inLoc').value), p_qty: Number($('inQty').value), p_note: $('inNote').value});
-  if (error) { m.textContent = errText(error); return; }
-  m.className = 'okmsg'; m.textContent = `Added. Stock now ${num(data.stock)} at ${locName($('inLoc').value)}.`; $('inQty').value = ''; $('inNote').value = ''; loadStock();
-});
-$('trForm').addEventListener('submit', async e => {
-  e.preventDefault(); const m = $('trMsg'); m.className = 'err';
-  const item = items.find(i => i.id === Number($('trItem').value)); if (!item) { m.textContent = 'Add a stock item first.'; return; }
-  const qty = Number($('trQty').value), from = locVal($('trFrom').value), to = locVal($('trTo').value), note = $('trNote').value;
-  const {data, error} = await sb.rpc('admin_transfer', {p_item: item.id, p_from: from, p_to: to, p_qty: qty, p_note: note});
-  if (error) { m.textContent = errText(error); return; }
-  m.className = 'okmsg'; m.textContent = `Transferred. Ref ${data.ref}.`;
-  printSlip(`${camp.logo ? `<img src="${camp.logo}" alt="">` : ''}<div class="c l">${esc(brand)}</div><div class="c b">STOCK TRANSFER</div><div class="c">${esc(data.ref)}</div><div class="c">${fmtDT(new Date())}</div><hr>
-    ${kv('From', locName(from))}${kv('To', locName(to))}<hr>${kv('Item', item.name)}<div class="c xl">${num(qty)} ${esc(item.unit)}</div>${note ? `<div>Note: ${esc(note)}</div>` : ''}<hr>
-    <br><div>Sent by: ____________</div><br><div>Received by: ____________</div>`);
-  $('trQty').value = ''; $('trNote').value = ''; loadStock();
-});
+
+/* gift master: one place; adding a gift also adds it to Prizes */
 function loadItemTable(){
-  $('itTable').innerHTML = `<thead><tr><th>Item</th><th>Unit</th><th>On/Off</th></tr></thead><tbody>` +
-    (items.length ? items.map(i => `<tr><td><input data-it="${i.id}" data-k="name" value="${esc(i.name)}" aria-label="Item name"></td><td><input data-it="${i.id}" data-k="unit" value="${esc(i.unit)}" style="width:100px" aria-label="Unit"></td>
+  $('itTable').innerHTML = `<thead><tr><th>Gift</th><th class="n">Price ₹</th><th>Unit</th><th>On/Off</th></tr></thead><tbody>` +
+    (items.length ? items.map(i => `<tr><td><input data-it="${i.id}" data-k="name" value="${esc(i.name)}" aria-label="Gift name"></td>
+      <td class="n"><input data-it="${i.id}" data-k="price" type="number" min="0" value="${esc(i.price)}" style="width:110px" aria-label="Price"></td>
+      <td><input data-it="${i.id}" data-k="unit" value="${esc(i.unit)}" style="width:90px" aria-label="Unit"></td>
       <td><select data-it="${i.id}" data-k="active" aria-label="On/Off"><option value="1"${i.active ? ' selected' : ''}>On</option><option value="0"${i.active ? '' : ' selected'}>Off</option></select></td></tr>`).join('')
-    : '<tr><td colspan="3">No items yet.</td></tr>') + '</tbody>';
+    : '<tr><td colspan="4">No gifts yet.</td></tr>') + '</tbody>';
 }
 $('itTable').addEventListener('change', async e => {
-  const t = e.target, id = t.dataset.it, k = t.dataset.k; if (!id) return;
-  const v = k === 'active' ? t.value === '1' : (t.value.trim() || (k === 'unit' ? 'pcs' : 'Item'));
+  const t = e.target, id = Number(t.dataset.it), k = t.dataset.k; if (!id) return;
+  let v = t.value.trim();
+  if (k === 'active') v = t.value === '1'; else if (k === 'price') v = Math.max(0, Number(v) || 0); else if (!v) v = k === 'unit' ? 'pcs' : 'Gift';
+  const old = items.find(i => i.id === id);
   const {error} = await sb.from('items').update({[k]: v}).eq('id', id);
-  $('itMsg').textContent = error ? errText(error) : ''; if (!error) loadStock();
+  if (error) { $('itMsg').textContent = errText(error); return; }
+  // keep the linked prize name in step with the gift name
+  if (k === 'name' && old) await sb.from('prizes').update({name: v}).eq('item_id', id).eq('name', old.name);
+  $('itMsg').textContent = ''; loadStock();
 });
 $('itForm').addEventListener('submit', async e => {
-  e.preventDefault(); const name = $('itName').value.trim(); if (!name) { $('itMsg').textContent = 'Enter an item name.'; return; }
-  const {error} = await sb.from('items').insert({name, unit: $('itUnit').value.trim() || 'pcs'});
+  e.preventDefault(); const name = $('itName').value.trim(); if (!name) { $('itMsg').textContent = 'Enter a gift name.'; return; }
+  const {data, error} = await sb.from('items').insert({name, unit: $('itUnit').value.trim() || 'pcs', price: Math.max(0, Number($('itPrice').value) || 0)}).select().single();
   if (error) { $('itMsg').textContent = errText(error); return; }
-  $('itMsg').textContent = ''; $('itName').value = ''; loadStock();
+  const {data: last} = await sb.from('prizes').select('sort').order('sort', {ascending: false}).limit(1);
+  await sb.from('prizes').insert({name, type: 'gift', item_id: data.id, weight: 0, daily_limit: 0, sort: ((last && last[0] && last[0].sort) || 0) + 1});
+  $('itMsg').className = 'okmsg'; $('itMsg').textContent = `"${name}" added. Set its % chance in the Prizes tab.`; setTimeout(() => { $('itMsg').className = 'err'; }, 4000);
+  $('itName').value = ''; $('itPrice').value = ''; loadStock();
 });
-const KIND = {in: 'Stock in', transfer_in: 'Transfer in', transfer_out: 'Transfer out', issue: 'Given to customer', adjust: 'Closing adjustment'};
+
+/* purchase entry: many lines, each with gift dropdown + qty + price */
+let puLines = [{item: '', qty: '', price: ''}];
+const giftOpts = sel => '<option value="">– select gift –</option>' + items.filter(i => i.active).map(i => `<option value="${i.id}"${String(i.id) === String(sel) ? ' selected' : ''}>${esc(i.name)}</option>`).join('');
+function renderPurchase(){
+  let tq = 0, tv = 0;
+  $('puTable').innerHTML = `<thead><tr><th>Gift</th><th class="n">Qty</th><th class="n">Price ₹</th><th class="n">Value</th><th></th></tr></thead><tbody>` +
+    puLines.map((l, i) => { const v = (Number(l.qty) || 0) * (Number(l.price) || 0); tq += Number(l.qty) || 0; tv += v;
+      return `<tr><td><select data-pu="${i}" data-k="item" style="min-width:200px" aria-label="Gift">${giftOpts(l.item)}</select></td>
+      <td class="n"><input data-pu="${i}" data-k="qty" type="number" min="1" inputmode="numeric" value="${esc(l.qty)}" style="width:100px" aria-label="Qty"></td>
+      <td class="n"><input data-pu="${i}" data-k="price" type="number" min="0" inputmode="decimal" value="${esc(l.price)}" style="width:110px" aria-label="Price"></td>
+      <td class="n" id="puv${i}">${rupee(v)}</td><td><button class="btn ghost sm" type="button" data-pudel="${i}" aria-label="Remove line">×</button></td></tr>`; }).join('') +
+    `<tr><td class="b">Total</td><td class="n b" id="puTq">${num(tq)}</td><td></td><td class="n b" id="puTv">${rupee(tv)}</td><td></td></tr></tbody>`;
+}
+function puTotals(){ let tq = 0, tv = 0; puLines.forEach((l, i) => { const v = (Number(l.qty) || 0) * (Number(l.price) || 0); tq += Number(l.qty) || 0; tv += v; const c = $('puv' + i); if (c) c.textContent = rupee(v); });
+  $('puTq').textContent = num(tq); $('puTv').textContent = rupee(tv); }
+$('puTable').addEventListener('input', e => { const i = e.target.dataset.pu; if (i == null) return; puLines[i][e.target.dataset.k] = e.target.value; puTotals(); });
+$('puTable').addEventListener('change', e => { const i = e.target.dataset.pu; if (i == null || e.target.dataset.k !== 'item') return;
+  puLines[i].item = e.target.value; const it = items.find(x => String(x.id) === e.target.value);
+  if (it && !puLines[i].price) { puLines[i].price = it.price || ''; renderPurchase(); } });
+$('puTable').addEventListener('click', e => { const i = e.target.dataset.pudel; if (i == null) return; puLines.splice(i, 1); if (!puLines.length) puLines.push({item: '', qty: '', price: ''}); renderPurchase(); });
+$('puAdd').addEventListener('click', () => { puLines.push({item: '', qty: '', price: ''}); renderPurchase(); });
+$('puSave').addEventListener('click', async () => {
+  const m = $('puMsg'); m.className = 'err';
+  const lines = puLines.filter(l => l.item || l.qty);
+  if (!lines.length) { m.textContent = 'Add at least one line.'; return; }
+  if (lines.some(l => !l.item || !(Number(l.qty) > 0))) { m.textContent = 'Every line needs a gift and a quantity.'; return; }
+  const b = $('puSave'); b.disabled = true;
+  const {data, error} = await sb.rpc('admin_purchase', {p_branch: locVal($('puLoc').value), p_note: $('puNote').value,
+    p_lines: lines.map(l => ({item_id: Number(l.item), qty: Number(l.qty), price: l.price === '' ? null : Number(l.price)}))});
+  b.disabled = false;
+  if (error) { m.textContent = errText(error); return; }
+  m.className = 'okmsg'; m.textContent = `Saved ${data.lines} line(s), value ${rupee(data.value)}. Ref ${data.ref}.`;
+  puLines = [{item: '', qty: '', price: ''}]; $('puNote').value = ''; loadStock();
+});
+
+/* transfer grid: rows = gifts, columns = branches */
+let trQty = {};
+function renderGrid(){
+  const from = locVal($('trFrom').value);
+  const dests = [{id: null, name: 'Head Office'}].concat(actBranches()).filter(l => l.id !== from);
+  const gifts = items.filter(i => i.active);
+  $('trGrid').innerHTML = `<thead><tr><th>Gift</th><th class="n">Available</th>${dests.map(d => `<th class="n">${esc(d.name)}</th>`).join('')}<th class="n">Sending</th><th class="n">Balance</th></tr></thead><tbody>` +
+    (gifts.length ? gifts.map(i => { const avail = stockMap[sk(i.id, from)] || 0;
+      return `<tr><td>${esc(i.name)}</td><td class="n b">${num(avail)}</td>${dests.map(d => `<td class="n"><input data-tr="${i.id}:${d.id ?? 'ho'}" type="number" min="0" inputmode="numeric" value="${esc(trQty[i.id + ':' + (d.id ?? 'ho')] || '')}" placeholder="0" style="width:78px" aria-label="${esc(i.name)} to ${esc(d.name)}"></td>`).join('')}
+        <td class="n" id="trs${i.id}">0</td><td class="n b" id="trb${i.id}">${num(avail)}</td></tr>`; }).join('')
+    : `<tr><td colspan="${dests.length + 4}">No gifts yet.</td></tr>`) + '</tbody>';
+  gridTotals();
+}
+function gridTotals(){
+  const from = locVal($('trFrom').value);
+  items.filter(i => i.active).forEach(i => {
+    const sending = Object.entries(trQty).filter(([k]) => k.startsWith(i.id + ':')).reduce((a, [, v]) => a + (Number(v) || 0), 0);
+    const bal = (stockMap[sk(i.id, from)] || 0) - sending;
+    if ($('trs' + i.id)) { $('trs' + i.id).textContent = num(sending); $('trb' + i.id).textContent = num(bal); $('trb' + i.id).className = 'n b ' + (bal < 0 ? 'neg' : ''); }
+  });
+}
+$('trGrid').addEventListener('input', e => { const k = e.target.dataset.tr; if (!k) return; trQty[k] = e.target.value; gridTotals(); });
+$('trFrom').addEventListener('change', () => { trQty = {}; renderGrid(); });
+$('trClear').addEventListener('click', () => { trQty = {}; renderGrid(); $('trMsg').textContent = ''; });
+$('trSave').addEventListener('click', async () => {
+  const m = $('trMsg'); m.className = 'err';
+  const from = locVal($('trFrom').value), note = $('trNote').value;
+  const lines = Object.entries(trQty).filter(([, v]) => Number(v) > 0).map(([k, v]) => { const [it, to] = k.split(':'); return {item_id: Number(it), to: to === 'ho' ? null : Number(to), qty: Number(v)}; });
+  if (!lines.length) { m.textContent = 'Type at least one quantity.'; return; }
+  const neg = items.find(i => $('trb' + i.id) && $('trb' + i.id).classList.contains('neg'));
+  if (neg) { m.textContent = `Not enough ${neg.name} at ${locName(from)}.`; return; }
+  const b = $('trSave'); b.disabled = true;
+  const {data, error} = await sb.rpc('admin_transfer_batch', {p_from: from, p_lines: lines, p_note: note});
+  b.disabled = false;
+  if (error) { const mm = /NO_STOCK (.+)/.exec(error.message || ''); m.textContent = mm ? `Not enough ${mm[1]} at ${locName(from)}.` : errText(error); return; }
+  m.className = 'okmsg'; m.textContent = `Transferred ${data.lines} line(s). Ref ${data.ref}.`;
+  // one slip per receiving branch, printed together (cut between slips)
+  const byTo = {}; lines.forEach(l => { (byTo[l.to ?? 'ho'] = byTo[l.to ?? 'ho'] || []).push(l); });
+  const iname = id => (items.find(i => i.id === id) || {}).name || '';
+  printSlip(Object.entries(byTo).map(([to, ls]) => `${camp.logo ? `<img src="${camp.logo}" alt="">` : ''}<div class="c l">${esc(brand)}</div><div class="c b">STOCK TRANSFER</div><div class="c">${esc(data.ref)}</div><div class="c">${fmtDT(new Date())}</div><hr>
+    ${kv('From', locName(from))}${kv('To', locName(to === 'ho' ? null : Number(to)))}<hr>
+    <table><tr><th>Gift</th><th class="r">Qty</th></tr>${ls.map(l => `<tr><td>${esc(iname(l.item_id))}</td><td class="r b">${num(l.qty)}</td></tr>`).join('')}
+    <tr><td class="b">Total</td><td class="r b">${num(ls.reduce((a, l) => a + l.qty, 0))}</td></tr></table>${note ? `<div>Note: ${esc(note)}</div>` : ''}<hr>
+    <br><div>Sent by: ____________</div><br><div>Received by: ____________</div><br><div class="c">- - - - - - cut here - - - - - -</div><br>`).join(''));
+  trQty = {}; loadStock();
+});
+
+/* movements with price and value */
+const KIND = {in: 'Purchase / stock in', transfer_in: 'Transfer in', transfer_out: 'Transfer out', issue: 'Given to customer', adjust: 'Closing adjustment'};
 $('mvGo').addEventListener('click', loadMoves);
 async function loadMoves(){
   let q = sb.from('stock_moves').select('*').order('id', {ascending: false}).limit(200);
@@ -401,11 +479,13 @@ async function loadMoves(){
   const l = $('mvLoc').value; if (l === '') q = q.is('branch_id', null); else if (l !== 'all') q = q.eq('branch_id', l);
   const {data, error} = await q;
   if (error) { $('mvTable').innerHTML = `<tr><td class="err">${esc(errText(error))}</td></tr>`; return; }
-  const iname = id => (items.find(i => i.id === id) || {}).name || '';
-  $('mvTable').innerHTML = `<thead><tr><th>Date</th><th>Location</th><th>Item</th><th>Type</th><th class="n">Qty</th><th>Ref / note</th><th>By</th></tr></thead><tbody>` +
-    (data.length ? data.map(m => `<tr><td>${fmtDT(m.created_at)}</td><td>${esc(locName(m.branch_id))}</td><td>${esc(iname(m.item_id))}</td><td>${KIND[m.kind] || esc(m.kind)}</td>
-      <td class="n ${m.qty < 0 ? 'neg' : 'pos'}">${m.qty > 0 ? '+' : ''}${num(m.qty)}</td><td>${esc([m.ref, m.note].filter(Boolean).join(' · '))}</td><td>${esc(m.by_user || '')}</td></tr>`).join('')
-    : '<tr><td colspan="7">No movements.</td></tr>') + '</tbody>';
+  const it = id => items.find(i => i.id === id) || {};
+  $('mvTable').innerHTML = `<thead><tr><th>Date</th><th>Location</th><th>Gift</th><th>Type</th><th class="n">Qty</th><th class="n">Price</th><th class="n">Value</th><th>Ref / note</th><th>By</th></tr></thead><tbody>` +
+    (data.length ? data.map(m => { const pr = m.price ?? it(m.item_id).price ?? 0;
+      return `<tr><td>${fmtDT(m.created_at)}</td><td>${esc(locName(m.branch_id))}</td><td>${esc(it(m.item_id).name || '')}</td><td>${KIND[m.kind] || esc(m.kind)}</td>
+      <td class="n ${m.qty < 0 ? 'neg' : 'pos'}">${m.qty > 0 ? '+' : ''}${num(m.qty)}</td><td class="n">${rupee(pr)}</td><td class="n">${rupee(Number(m.qty) * Number(pr))}</td>
+      <td>${esc([m.ref, m.note].filter(Boolean).join(' · '))}</td><td>${esc(m.by_user || '')}</td></tr>`; }).join('')
+    : '<tr><td colspan="9">No movements.</td></tr>') + '</tbody>';
 }
 
 /* ---------- day closings ---------- */

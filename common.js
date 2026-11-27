@@ -7,7 +7,7 @@ window.App = (() => {
   const configured = !!(C.SUPABASE_URL && !C.SUPABASE_URL.includes('YOUR-PROJECT') && C.SUPABASE_ANON_KEY && !C.SUPABASE_ANON_KEY.includes('PASTE') && window.supabase);
   const fmtD = s => { if (!s) return ''; const [y, m, d] = String(s).slice(0, 10).split('-'); return `${d}/${m}/${y}`; };
   const fmtDT = s => s ? new Date(s).toLocaleString('en-IN', {timeZone:'Asia/Kolkata', day:'2-digit', month:'2-digit', year:'numeric', hour:'2-digit', minute:'2-digit'}) : '';
-  const rupee = n => '₹' + Number(n || 0).toLocaleString('en-IN');
+  const rupee = n => (Number(n) < 0 ? '-₹' : '₹') + Math.abs(Number(n || 0)).toLocaleString('en-IN');
   const num = n => Number(n || 0).toLocaleString('en-IN');
   const today = () => new Date().toLocaleDateString('en-CA', {timeZone:'Asia/Kolkata'});
   const TYPES = {voucher:'Voucher', gift:'Free gift', bumper:'Bumper prize'};
@@ -37,6 +37,9 @@ window.App = (() => {
     ALREADY_CLOSED:'This day is already closed for this branch.',
     FUTURE_DAY:'You cannot close a future date.',
     QTY_BAD:'Enter a quantity above 0.',
+    NO_LINES:'Add at least one line.',
+    PRICE_BAD:'Price cannot be negative.',
+    ITEM_BAD:'Choose a gift from the list.',
     SAME_LOCATION:'From and To cannot be the same.',
     PIN_TAKEN:'Another branch already uses this PIN. Choose a different PIN.',
     PIN_FORMAT:'PIN must be 6 digits (numbers only).',
