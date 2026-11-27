@@ -413,8 +413,11 @@ $('itForm').addEventListener('submit', async e => {
   e.preventDefault(); const name = $('itName').value.trim(); if (!name) { $('itMsg').textContent = 'Enter a gift name.'; return; }
   const {data, error} = await sb.from('items').insert({name, unit: $('itUnit').value.trim() || 'pcs', price: Math.max(0, Number($('itPrice').value) || 0)}).select().single();
   if (error) { $('itMsg').textContent = errText(error); return; }
-  const {data: last} = await sb.from('prizes').select('sort').order('sort', {ascending: false}).limit(1);
-  await sb.from('prizes').insert({name, type: 'gift', item_id: data.id, weight: 0, daily_limit: 0, sort: ((last && last[0] && last[0].sort) || 0) + 1});
+  // one prize per gift: link to an existing prize with the same name, otherwise add it
+  const {data: same} = await sb.from('prizes').select('id').ilike('name', name).limit(1);
+  if (same && same.length) await sb.from('prizes').update({item_id: data.id, type: 'gift'}).eq('id', same[0].id);
+  else { const {data: last} = await sb.from('prizes').select('sort').order('sort', {ascending: false}).limit(1);
+    await sb.from('prizes').insert({name, type: 'gift', item_id: data.id, weight: 0, daily_limit: 0, sort: ((last && last[0] && last[0].sort) || 0) + 1}); }
   $('itMsg').className = 'okmsg'; $('itMsg').textContent = `"${name}" added. Set its % chance in the Prizes tab.`; setTimeout(() => { $('itMsg').className = 'err'; }, 4000);
   $('itName').value = ''; $('itPrice').value = ''; loadStock();
 });
@@ -640,7 +643,7 @@ $('pzFile').addEventListener('change', async () => {
   } catch (err) { $('pzWarn').textContent = errText(err); }
 });
 $('addPz').addEventListener('click', async () => {
-  const {error} = await sb.from('prizes').insert({name: 'New prize', type: 'gift', weight: 1, daily_limit: 5, sort: prizes.length + 1});
+  const {error} = await sb.from('prizes').insert({name: 'New prize ' + (prizes.length + 1), type: 'gift', weight: 1, daily_limit: 5, sort: prizes.length + 1});
   if (error) $('pzWarn').textContent = errText(error); else loadPrizes();
 });
 

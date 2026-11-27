@@ -54,7 +54,7 @@ window.App = (() => {
   const errText = e => {
     const m = (e && e.message) || String(e || '');
     for (const k in ERR) if (m.includes(k)) return ERR[k];
-    if (/duplicate key/i.test(m) && /name/i.test(m)) return 'This name already exists.';
+    if (/duplicate key/i.test(m) && /name/i.test(m)) return 'This name already exists (names must be different, upper/lower case does not matter).';
     if (/row-level security/i.test(m)) return 'You do not have permission to change this.';
     return /fetch|network|Failed/i.test(m) ? 'Internet connection problem. Please try again.' : 'Something went wrong: ' + m;
   };

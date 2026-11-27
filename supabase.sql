@@ -1,5 +1,5 @@
 -- =====================================================================
--- @less fashion Scratch & Win  -  Supabase database (version 10: faster loading)
+-- @less fashion Scratch & Win  -  Supabase database (version 11: no duplicate prize names)
 -- Supabase > SQL Editor > New query > paste this whole file > Run
 -- Safe to run on a new project AND on top of any earlier version (keeps all data).
 -- =====================================================================
@@ -781,6 +781,12 @@ begin
   if exists (select 1 from public.branches where pin_hash = crypt(p_new_pin, pin_hash) and id <> v_branch) then raise exception 'PIN_TAKEN'; end if;
   update public.branches set pin_hash = crypt(p_new_pin, gen_salt('bf')), pin_key = public._pin_key(p_new_pin) where id = v_branch;
   return json_build_object('ok', true);
+end $$;
+
+-- v11: no duplicate prize / gift names (ignores upper/lower case). Skipped if duplicates still exist – run december-2026-plan.sql to merge them.
+do $$ begin
+  begin create unique index if not exists prizes_name_ci_uq on public.prizes (lower(trim(name))); exception when unique_violation then raise notice 'duplicate prize names exist'; end;
+  begin create unique index if not exists items_name_ci_uq  on public.items  (lower(trim(name))); exception when unique_violation then raise notice 'duplicate gift names exist'; end;
 end $$;
 
 -- ---------- Who can run what ----------
