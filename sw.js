@@ -1,6 +1,6 @@
 // @less fashion Scratch & Win - makes the app installable and loads fast on shop Wi-Fi
-const CACHE = 'sw-app-v5';
-const SHELL = ['/counter.html', '/admin.html', '/index.html', '/style.css', '/xmas.css', '/common.js', '/xmas.js', '/config.js', '/manifest.webmanifest', '/icon-192.png', '/icon-512.png', '/gift-box.webp', '/gift-box-tall.webp', '/santa-standing.webp', '/santa-box.webp'];
+const CACHE = 'sw-app-v6';
+const SHELL = ['/counter.html', '/admin.html', '/index.html', '/style.css', '/xmas.css', '/common.js', '/xmas.js', '/config.js', '/manifest.webmanifest', '/icon-192.png', '/icon-512.png', '/gift-box.webp', '/gift-box-tall.webp', '/santa-standing.webp', '/santa-box.webp', '/p-cashback-50.webp', '/p-cashback-100.webp', '/p-cashback-200.webp', '/p-cashback-500.webp', '/p-purchase-voucher-100.webp', '/p-purchase-voucher-200.webp', '/p-purchase-voucher-500.webp', '/p-bluetooth-speaker.webp', '/p-bluetooth-earpods.webp', '/p-bluetooth-neckband.webp'];
 self.addEventListener('install', e => { e.waitUntil(caches.open(CACHE).then(c => c.addAll(SHELL)).then(() => self.skipWaiting())); });
 self.addEventListener('activate', e => { e.waitUntil(caches.keys().then(ks => Promise.all(ks.filter(k => k !== CACHE).map(k => caches.delete(k)))).then(() => self.clients.claim())); });
 self.addEventListener('fetch', e => {

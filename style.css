@@ -97,3 +97,44 @@ tr.click{cursor:pointer}tr.click:hover{background:var(--card)}
   #print.a4 th{text-align:left;font-weight:700}
 }
 .rep h1{font-size:24px;margin-bottom:4px}.rep h2{font-size:18px;margin:22px 0 8px}
+
+/* ---------- counter red theme (v10): red and gold everywhere, no white ---------- */
+body.red{background:radial-gradient(circle at 50% -10%,#c8141f,#6e0812 55%,#3a030a);color:#fff3d6;min-height:100vh}
+body.red header{background:linear-gradient(180deg,#d01622,#8e0c18);box-shadow:0 6px 20px #0006}
+body.red nav button{color:#ffe6b0}
+body.red nav button[aria-selected=true]{background:#7e0915;color:#ffd56b}
+body.red main{background:linear-gradient(180deg,rgba(126,9,21,.94),rgba(78,4,12,.94));border:2px solid rgba(226,173,55,.55);border-radius:24px;margin-top:18px;margin-bottom:36px;box-shadow:0 20px 50px -20px #000c;position:relative;z-index:2}
+body.red h2,body.red h3{color:#ffd56b}
+body.red label,body.red .note,body.red th{color:#f5d48a}
+body.red .hi{color:#fff3d6}
+body.red input,body.red select,body.red textarea{background:rgba(0,0,0,.28);border:1px solid rgba(245,212,138,.55);color:#fff}
+body.red input::placeholder{color:#d9a5a5}
+body.red select option{background:#5c0610;color:#fff}
+body.red input:disabled,body.red select:disabled{background:rgba(0,0,0,.15);color:#d9b9b9}
+body.red .btn{background:linear-gradient(180deg,#ffe08a,#e2ad37);color:#4a0a10}
+body.red .btn.gold{background:linear-gradient(180deg,#ffe9a8,#f0b93a);color:#4a0a10;box-shadow:0 6px 18px #e2ad3755}
+body.red .btn.dark{background:#2a0306;color:#ffd56b;border:1px solid rgba(245,212,138,.5)}
+body.red .btn.ghost{background:none;color:#ffe6b0;border:1px solid rgba(245,212,138,.6)}
+body.red .btn.wa{background:#1fa855;color:#fff}
+body.red .res,body.red .card{background:rgba(0,0,0,.22);border:1px solid rgba(245,212,138,.4)}
+body.red .msg{background:rgba(0,0,0,.25);border-color:rgba(245,212,138,.4);color:#fff3d6}
+body.red .code{color:#ffd56b}
+body.red .kpi{background:rgba(0,0,0,.28);border:1px solid rgba(245,212,138,.35)}
+body.red th,body.red td{border-bottom-color:rgba(255,220,160,.18)}
+body.red .err{color:#ffb4a8}body.red .okmsg{color:#9ff0b8}
+body.red .pill{background:rgba(255,255,255,.12);color:#fff3d6}
+body.red .pill.ok{background:#1d8a4b55;color:#b8ffd2}body.red .pill.bad{background:#00000055;color:#ffb4a8}body.red .pill.g{background:#e2ad3740;color:#ffd56b}
+body.red td.neg{color:#ffb4a8}body.red td.pos{color:#9ff0b8}
+body.red .who button{border-color:#ffd56b88}
+/* prize picture pop-up after scratching */
+#winPop{position:fixed;inset:0;z-index:30;display:flex;align-items:center;justify-content:center;gap:0;background:rgba(40,2,6,.72);backdrop-filter:blur(3px);animation:wpBg .25s ease-out;cursor:pointer;padding:16px}
+#winPop .wpIn{position:relative;width:min(88vw,560px);text-align:center;background:linear-gradient(180deg,#b3121f,#6e0812);border:3px solid #e2ad37;border-radius:26px;padding:18px 18px 14px;box-shadow:0 30px 80px #000c,0 0 60px #ffb30055;animation:wpIn .55s cubic-bezier(.2,1.5,.4,1)}
+#winPop .wpT{font:700 clamp(20px,4.5vw,28px) Jost,sans-serif;color:#ffd56b;margin-bottom:10px}
+#winPop .wpIn>img{width:100%;max-height:52vh;object-fit:contain;border-radius:16px;background:rgba(0,0,0,.2)}
+#winPop .wpN{font:700 clamp(26px,6vw,42px)/1.1 Jost,sans-serif;color:#fff;margin-top:12px;text-shadow:0 3px 10px #0008}
+#winPop .wpS{font:600 13px Inter,sans-serif;color:#f5d48a;margin-top:8px}
+#winPop .wpSanta{height:min(46vh,380px);width:auto;margin-left:-40px;align-self:flex-end;filter:drop-shadow(0 12px 20px #000a);animation:wpIn .7s .15s both cubic-bezier(.2,1.5,.4,1)}
+@media(max-width:700px){#winPop .wpSanta{display:none}}
+@keyframes wpBg{from{opacity:0}}
+@keyframes wpIn{from{transform:scale(.4) translateY(40px);opacity:0}}
+@media(prefers-reduced-motion:reduce){#winPop,#winPop .wpIn,#winPop .wpSanta{animation:none}}

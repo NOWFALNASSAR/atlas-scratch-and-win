@@ -46,20 +46,20 @@ window.Xmas = (() => {
     for (let i = 0; i < 90; i++) stars += `<circle cx="${(i * 197) % W}" cy="${(i * 73) % 520}" r="${(i % 3) * .6 + .7}" fill="#fff" opacity="${.35 + (i % 5) * .13}"><animate attributeName="opacity" values="1;.2;1" dur="${2 + (i % 4)}s" repeatCount="indefinite" begin="${(i % 7) * .4}s"/></circle>`;
     const tree = (x, y, s, star) => `<g transform="translate(${x},${y}) scale(${s})"><rect x="-8" y="0" width="16" height="26" fill="#5b3a1a"/>
       <path d="M0 -150 L60 -60 L32 -60 L80 0 L-80 0 L-32 -60 L-60 -60Z" fill="#1f6b3a"/>
-      <path d="M0 -150 L22 -116 Q0 -108 -22 -116Z M-60 -60 Q-30 -70 0 -62 Q30 -70 60 -60 L46 -56 Q20 -64 0 -56 Q-20 -64 -46 -56Z" fill="#fff" opacity=".9"/>
+      <path d="M0 -150 L22 -116 Q0 -108 -22 -116Z M-60 -60 Q-30 -70 0 -62 Q30 -70 60 -60 L46 -56 Q20 -64 0 -56 Q-20 -64 -46 -56Z" fill="#ffd56b" opacity=".75"/>
       ${[[-30, -30, '#ff3b3b'], [26, -24, '#ffd23b'], [-8, -90, '#3bb8ff'], [12, -62, '#ff3b3b'], [-42, -8, '#38d66b'], [44, -6, '#ffd23b']].map(([a, b, c]) => `<circle cx="${a}" cy="${b}" r="5" fill="${c}"/>`).join('')}
       ${star ? '<path d="M0 -176 l7 15 16 2 -12 11 3 16 -14 -8 -14 8 3 -16 -12 -11 16 -2z" fill="#ffd23b"/>' : ''}</g>`;
     [[110, 800, 1.1, 1], [270, 830, .7], [1330, 815, 1.25, 1], [1500, 840, .8], [80, 860, .5], [520, 845, .85, 1], [610, 870, .55], [990, 850, .95, 1], [1100, 875, .6], [455, 880, .45], [1150, 885, .5]].forEach(([x, y, s, st]) => { trees += tree(x, y, s, st); });
     return `<svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="xMidYMax slice" xmlns="http://www.w3.org/2000/svg">
-      <defs><linearGradient id="sky" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#06122a"/><stop offset=".7" stop-color="#173a6e"/><stop offset="1" stop-color="#2c5a95"/></linearGradient>
+      <defs><linearGradient id="sky" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#2a0207"/><stop offset=".65" stop-color="#6e0812"/><stop offset="1" stop-color="#a3111f"/></linearGradient>
       <radialGradient id="moon"><stop offset=".6" stop-color="#fff8dc"/><stop offset="1" stop-color="#fff8dc" stop-opacity="0"/></radialGradient></defs>
       <rect width="${W}" height="${H}" fill="url(#sky)"/>${stars}
-      <circle cx="1380" cy="150" r="110" fill="url(#moon)" opacity=".35"/><circle cx="1380" cy="150" r="58" fill="#fff8dc"/>
-      <path d="M0 760 Q300 690 620 750 T1250 730 T1600 750 L1600 900 L0 900Z" fill="#cfe0f2"/>
-      <g transform="translate(700,770)"><rect x="0" y="-70" width="150" height="80" fill="#7a3b2b"/><path d="M-14 -66 L75 -130 L164 -66Z" fill="#fff"/>
+      <circle cx="1380" cy="150" r="110" fill="url(#moon)" opacity=".35"/><circle cx="1380" cy="150" r="58" fill="#ffd56b"/>
+      <path d="M0 760 Q300 690 620 750 T1250 730 T1600 750 L1600 900 L0 900Z" fill="#5c0610"/>
+      <g transform="translate(700,770)"><rect x="0" y="-70" width="150" height="80" fill="#7a3b2b"/><path d="M-14 -66 L75 -130 L164 -66Z" fill="#e2ad37"/>
         <rect x="22" y="-48" width="30" height="26" fill="#ffd56b"/><rect x="98" y="-48" width="30" height="26" fill="#ffd56b"/><rect x="62" y="-34" width="26" height="44" fill="#4a2418"/></g>
       ${trees}
-      <path d="M0 840 Q400 790 800 835 T1600 830 L1600 900 L0 900Z" fill="#f4f9ff"/></svg>`;
+      <path d="M0 840 Q400 790 800 835 T1600 830 L1600 900 L0 900Z" fill="#3d030a"/></svg>`;
   }
 
   function snow(){
@@ -69,7 +69,7 @@ window.Xmas = (() => {
     size(); addEventListener('resize', size);
     for (let i = 0; i < 140; i++) flakes.push({x: Math.random() * W, y: Math.random() * H, r: Math.random() * 2.6 + .8, s: Math.random() * .9 + .4, d: Math.random() * 6.28});
     const tick = () => {
-      x.clearRect(0, 0, W, H); x.fillStyle = 'rgba(255,255,255,.9)'; x.beginPath();
+      x.clearRect(0, 0, W, H); x.fillStyle = 'rgba(255,226,160,.85)'; x.beginPath();
       flakes.forEach(f => { f.y += f.s; f.d += .01; f.x += Math.sin(f.d) * .5; if (f.y > H) { f.y = -5; f.x = Math.random() * W; } x.moveTo(f.x, f.y); x.arc(f.x, f.y, f.r, 0, 6.28); });
       x.fill(); snowRaf = requestAnimationFrame(tick);
     };

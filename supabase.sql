@@ -1,5 +1,5 @@
 -- =====================================================================
--- @less fashion Scratch & Win  -  Supabase database (version 9: @less artwork + December plan support)
+-- @less fashion Scratch & Win  -  Supabase database (version 10: faster loading)
 -- Supabase > SQL Editor > New query > paste this whole file > Run
 -- Safe to run on a new project AND on top of any earlier version (keeps all data).
 -- =====================================================================
@@ -21,6 +21,7 @@ create table if not exists public.branches (
 
 alter table if exists public.branches add column if not exists bill_from numeric;  -- v5: valid bill number range
 alter table if exists public.branches add column if not exists bill_to   numeric;
+alter table if exists public.branches add column if not exists pin_key   text;      -- v10: fast PIN lookup
 
 create table if not exists public.campaign (
   id             int primary key default 1 check (id = 1),
@@ -101,6 +102,7 @@ create table if not exists public.scratches (
 alter table public.scratches add column if not exists item_id bigint references public.items(id) on delete set null;
 alter table public.scratches add column if not exists card_no int not null default 1;   -- v5: 1st or 2nd card for the same bill
 drop index if exists public.scratches_bill_uq;
+create index if not exists branches_pin_key_idx on public.branches (pin_key);
 create unique index if not exists scratches_bill_card_uq on public.scratches (branch_id, lower(bill_no), card_no);
 create index if not exists scratches_day_idx           on public.scratches (day);
 create index if not exists scratches_mobile_idx        on public.scratches (mobile, day);
@@ -211,13 +213,25 @@ grant usage, select on all sequences in schema public to authenticated;
 -- Counter tablets (anon) cannot read any table. They only call the functions below.
 
 -- ---------- Helpers ----------
-create or replace function public._branch_by_pin(p_pin text)
-returns bigint language sql stable security definer
+create or replace function public._pin_key(p_pin text) returns text language sql immutable
 set search_path = public, extensions as $$
-  select id from public.branches
-  where active and pin_hash = crypt(coalesce(p_pin,''), pin_hash)
-  limit 1
+  select encode(extensions.digest('less-scratch-pin:' || coalesce(p_pin,''), 'sha256'), 'hex')
 $$;
+
+-- v10: fast PIN check. Looks up the indexed key first; falls back to the slow bcrypt check once and then stores the key.
+drop function if exists public._branch_by_pin(text);
+create or replace function public._branch_by_pin(p_pin text)
+returns bigint language plpgsql security definer
+set search_path = public, extensions as $$
+declare v_id bigint; v_key text := public._pin_key(p_pin);
+begin
+  if coalesce(p_pin,'') !~ '^[0-9]{6}$' then return null; end if;
+  select id into v_id from public.branches where active and pin_key = v_key limit 1;
+  if v_id is not null then return v_id; end if;
+  select id into v_id from public.branches where active and pin_key is null and pin_hash = crypt(p_pin, pin_hash) limit 1;
+  if v_id is not null then update public.branches set pin_key = v_key where id = v_id; end if;
+  return v_id;
+end $$;
 
 -- last group of digits in a bill number: 'TDP/2026/1234' -> 1234
 create or replace function public._bill_num(p_bill text)
@@ -255,8 +269,17 @@ begin
   select name into v_name from public.branches where id = v_id;
   s := public._settings_json();
   return (s::jsonb || jsonb_build_object('branch', v_name,
-    'prizes', (select coalesce(jsonb_agg(jsonb_build_object('id',id,'name',name,'type',type,'image',image) order by sort,id),'[]'::jsonb)
+    'prizes', (select coalesce(jsonb_agg(jsonb_build_object('id',id,'name',name,'type',type,'img',md5(image)) order by sort,id),'[]'::jsonb)
                from public.prizes where active)))::json;
+end $$;
+
+-- v10: prize pictures are sent only when the tablet does not have them yet
+create or replace function public.prize_images(p_pin text, p_ids bigint[])
+returns json language plpgsql security definer set search_path = public as $$
+begin
+  if public._branch_by_pin(p_pin) is null then raise exception 'BRANCH_PIN'; end if;
+  return (select coalesce(json_agg(json_build_object('id', id, 'img', md5(image), 'image', image)), '[]'::json)
+          from public.prizes where id = any(p_ids) and image is not null);
 end $$;
 
 -- ---------- Counter: one scratch (prize decided HERE, on the server) ----------
@@ -518,13 +541,14 @@ begin
   end if;
   if p_id is null then
     if p_pin is null or p_pin = '' then raise exception 'PIN_FORMAT'; end if;
-    insert into public.branches (name, pin_hash, active, bill_from, bill_to)
-    values (trim(p_name), crypt(p_pin, gen_salt('bf')), coalesce(p_active, true), p_bill_from, p_bill_to)
+    insert into public.branches (name, pin_hash, pin_key, active, bill_from, bill_to)
+    values (trim(p_name), crypt(p_pin, gen_salt('bf')), public._pin_key(p_pin), coalesce(p_active, true), p_bill_from, p_bill_to)
     returning id into v_id;
   else
     update public.branches
        set name = trim(p_name), active = coalesce(p_active, active), bill_from = p_bill_from, bill_to = p_bill_to,
-           pin_hash = case when p_pin is null or p_pin = '' then pin_hash else crypt(p_pin, gen_salt('bf')) end
+           pin_hash = case when p_pin is null or p_pin = '' then pin_hash else crypt(p_pin, gen_salt('bf')) end,
+           pin_key  = case when p_pin is null or p_pin = '' then pin_key else public._pin_key(p_pin) end
      where id = p_id
     returning id into v_id;
   end if;
@@ -755,20 +779,20 @@ begin
   if coalesce(p_new_pin,'') !~ '^[0-9]{6}$' then raise exception 'PIN_FORMAT'; end if;
   if p_new_pin = p_pin then raise exception 'PIN_SAME'; end if;
   if exists (select 1 from public.branches where pin_hash = crypt(p_new_pin, pin_hash) and id <> v_branch) then raise exception 'PIN_TAKEN'; end if;
-  update public.branches set pin_hash = crypt(p_new_pin, gen_salt('bf')) where id = v_branch;
+  update public.branches set pin_hash = crypt(p_new_pin, gen_salt('bf')), pin_key = public._pin_key(p_new_pin) where id = v_branch;
   return json_build_object('ok', true);
 end $$;
 
 -- ---------- Who can run what ----------
 do $$ declare f text; begin
-  foreach f in array array['_branch_by_pin(text)','_stock(bigint,bigint)','_pending(bigint,bigint)','_settings_json()','_closing_data(bigint,date)','_bill_num(text)'] loop
+  foreach f in array array['_branch_by_pin(text)','_stock(bigint,bigint)','_pending(bigint,bigint)','_settings_json()','_closing_data(bigint,date)','_bill_num(text)','_pin_key(text)'] loop
     execute 'revoke all on function public.' || f || ' from public, anon, authenticated';
   end loop;
   -- _role() is used inside the table security rules, so logged-in users must be able to run it (it only returns their own role)
   revoke all on function public._role() from public, anon;
   grant execute on function public._role() to authenticated;
   foreach f in array array['branch_login(text)','do_scratch(text,text,numeric,text,text,int)','check_coupon(text,text)',
-                           'redeem_coupon(text,text)','branch_stock(text)','change_branch_pin(text,text)','closing_preview(text,date)','save_closing(text,date,jsonb,text)'] loop
+                           'redeem_coupon(text,text)','branch_stock(text)','change_branch_pin(text,text)','prize_images(text,bigint[])','closing_preview(text,date)','save_closing(text,date,jsonb,text)'] loop
     execute 'revoke all on function public.' || f || ' from public';
     execute 'grant execute on function public.' || f || ' to anon, authenticated';
   end loop;

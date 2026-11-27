@@ -14,7 +14,7 @@
 <link rel="stylesheet" href="style.css">
 <link rel="stylesheet" href="xmas.css">
 </head>
-<body>
+<body class="red">
 <header>
   <div class="top">
     <div class="brand"><img data-logo alt="" hidden><div><h1><span data-brand>@less fashion</span> · <b>Scratch &amp; Win</b></h1><small id="campLbl"></small></div></div>
@@ -144,6 +144,24 @@
 const {$, esc, sb, configured, fmtD, fmtDT, rupee, num, today, TYPES, store, errText, applyBrand, printSlip, kv, confetti} = App;
 let sess = store.get('session'); // {pin, branch, campaign, min_bill, brand_name, logo, color, accent, terms, prizes:[...]}
 let cur = null, brand = '@less fashion';
+const pimg = {};   // prize id -> uploaded picture (kept on this tablet)
+function defaultPic(name){
+  const n = String(name || '').toLowerCase(), amt = (n.match(/\d+/) || [''])[0];
+  if (/cash\s*back/.test(n) && ['50','100','200','500'].includes(amt)) return `p-cashback-${amt}.webp`;
+  if (/voucher/.test(n) && ['100','200','500'].includes(amt)) return `p-purchase-voucher-${amt}.webp`;
+  if (/speaker/.test(n)) return 'p-bluetooth-speaker.webp';
+  if (/ear\s*pod|earbud|tws/.test(n)) return 'p-bluetooth-earpods.webp';
+  if (/neck\s*band|head\s*set|headphone/.test(n)) return 'p-bluetooth-neckband.webp';
+  return 'gift-box.webp';
+}
+const picFor = p => (p && pimg[p.id]) || defaultPic(p && p.name);
+async function loadPrizeImages(){
+  const need = [];
+  (sess.prizes || []).forEach(p => { if (!p.img) return; const c = store.get('pimg-' + p.id); if (c && c.h === p.img) pimg[p.id] = c.d; else need.push(p.id); });
+  if (!need.length) return;
+  const {data} = await sb.rpc('prize_images', {p_pin: sess.pin, p_ids: need});
+  (data || []).forEach(r => { pimg[r.id] = r.image; store.set('pimg-' + r.id, {h: r.img, d: r.image}); });
+}
 
 function view(v){
   ['login','scratch','redeem','stock','closing','printer','config'].forEach(x => { $('v-'+x).hidden = x !== v; });
@@ -168,7 +186,7 @@ function boot(){
   $('who').hidden = false; $('tabs').hidden = false; paintHeader(); view('scratch');
   sb.rpc('branch_login', {p_pin: sess.pin}).then(({data, error}) => {
     if (error && String(error.message).includes('BRANCH_PIN')) { store.del('session'); sess = null; boot(); return; }
-    if (data) { sess = {pin: sess.pin, ...data}; store.set('session', sess); store.set('brand', {brand_name:data.brand_name, logo:data.logo, color:data.color, accent:data.accent, theme:data.theme}); paintHeader(); }
+    if (data) { sess = {pin: sess.pin, ...data}; store.set('session', sess); loadPrizeImages(); store.set('brand', {brand_name:data.brand_name, logo:data.logo, color:data.color, accent:data.accent, theme:data.theme}); paintHeader(); }
   });
 }
 $('loginForm').addEventListener('submit', async e => {
@@ -177,7 +195,7 @@ $('loginForm').addEventListener('submit', async e => {
   $('loginErr').textContent = '';
   const {data, error} = await sb.rpc('branch_login', {p_pin: pin});
   if (error) { $('loginErr').textContent = errText(error); return; }
-  sess = {pin, ...data}; store.set('session', sess); $('pin').value = ''; boot();
+  sess = {pin, ...data}; store.set('session', sess); $('pin').value = ''; boot(); loadPrizeImages();
 });
 $('logout').addEventListener('click', () => { store.del('session'); sess = null; boot(); });
 
@@ -201,8 +219,7 @@ function startCard(data){
   const p = (sess.prizes || []).find(x => x.id === cur.prize_id);
   const face = $('face');
   face.style.visibility = 'hidden';   // never show the prize before the gold cover is drawn
-  if (p && p.image) { face.className = 'face photo'; face.style.backgroundImage = `url("${p.image}")`; }
-  else { face.className = 'face'; face.style.backgroundImage = ''; }
+  face.className = 'face photo'; face.style.backgroundImage = `url("${picFor(p || {id: cur.prize_id, name: cur.prize})}")`;
   $('entry').hidden = true; $('play').hidden = false; $('res').hidden = true; $('giveErr').textContent = '';
   $('hi').textContent = cur.card_no === 2 ? '2nd scratch card – scratch the gold card with your finger!' : 'Scratch the gold card with your finger!';
   $('pName').textContent = cur.prize; $('pType').textContent = TYPES[cur.type] || '';
@@ -219,12 +236,12 @@ $('secGo').addEventListener('click', async () => {
 });
 
 const cv = $('cv'), ctx = cv.getContext('2d', {willReadFrequently: true});
-let drawing = false, moves = 0, revealed = false, logoImg = null;
-const foilArt = new Image(); foilArt.src = 'gift-box-tall.webp'; foilArt.onload = () => { if (!$('play').hidden && !revealed) paintFoil(); };
-const winArt = new Image(); winArt.src = 'santa-box.webp'; const winArt2 = new Image(); winArt2.src = 'gift-box.webp';
+let drawing = false, moves = 0, revealed = false, logoImg = null, scratched = false, foilW = 0;
+const foilArt = new Image(); foilArt.src = 'gift-box-tall.webp'; foilArt.onload = () => { if (!$('play').hidden && !revealed && !scratched) paintFoil(); };
+
 function paintFoil(){
   const r = cv.getBoundingClientRect(), dpr = devicePixelRatio || 1;
-  cv.width = Math.round(r.width * dpr); cv.height = Math.round(r.height * dpr); cv.style.opacity = 1; revealed = false;
+  cv.width = Math.round(r.width * dpr); cv.height = Math.round(r.height * dpr); cv.style.opacity = 1; revealed = false; scratched = false; moves = 0; foilW = Math.round(r.width);
   ctx.globalCompositeOperation = 'source-over';
   const gold = getComputedStyle(document.documentElement).getPropertyValue('--gold').trim() || '#e2ad37';
   const g = ctx.createLinearGradient(0, 0, cv.width, cv.height);
@@ -257,13 +274,14 @@ function loadLogo(){ if (sess && sess.logo) { logoImg = new Image(); logoImg.src
 function cleared(){ const d = ctx.getImageData(0, 0, cv.width, cv.height).data; let c = 0, n = 0; for (let i = 3; i < d.length; i += 160) { n++; if (d[i] < 20) c++; } return c / n; }
 function scratchAt(e){
   const r = cv.getBoundingClientRect(), dpr = cv.width / r.width;
+  scratched = true;
   ctx.globalCompositeOperation = 'destination-out'; ctx.beginPath();
-  ctx.arc((e.clientX - r.left) * dpr, (e.clientY - r.top) * dpr, 28 * dpr, 0, Math.PI * 2); ctx.fill();
-  if (++moves % 10 === 0 && cleared() > .45) reveal();
+  ctx.arc((e.clientX - r.left) * dpr, (e.clientY - r.top) * dpr, 34 * dpr, 0, Math.PI * 2); ctx.fill();
+  if (++moves % 8 === 0 && cleared() > .35) reveal();
 }
 cv.addEventListener('pointerdown', e => { if (revealed) return; drawing = true; cv.setPointerCapture(e.pointerId); scratchAt(e); });
 cv.addEventListener('pointermove', e => { if (drawing && !revealed) scratchAt(e); });
-['pointerup','pointercancel'].forEach(t => cv.addEventListener(t, () => { drawing = false; if (!revealed && cleared() > .45) reveal(); }));
+['pointerup','pointercancel'].forEach(t => cv.addEventListener(t, () => { drawing = false; if (!revealed && cleared() > .35) reveal(); }));
 $('revealAll').addEventListener('click', reveal);
 function reveal(){
   if (revealed || !cur) return; revealed = true; cv.style.opacity = 0; winPop(); setTimeout(() => ctx.clearRect(0, 0, cv.width, cv.height), 650); confetti();
@@ -278,11 +296,15 @@ function reveal(){
   if (store.get('autoPrint') === '1') printCoupon();
 }
 function winPop(){
-  if (matchMedia('(prefers-reduced-motion: reduce)').matches) return;
-  const art = Xmas.active ? winArt : winArt2; if (!art.complete || !art.naturalWidth) return;
   document.getElementById('winPop')?.remove();
-  const im = document.createElement('img'); im.id = 'winPop'; im.src = art.src; im.alt = ''; document.body.appendChild(im);
-  setTimeout(() => im.remove(), 2900);
+  const p = (sess.prizes || []).find(x => x.id === cur.prize_id) || {id: cur.prize_id, name: cur.prize};
+  const w = document.createElement('div'); w.id = 'winPop';
+  w.innerHTML = `<div class="wpIn"><div class="wpT">${Xmas.active ? 'Ho ho ho! You won' : 'Congratulations! You won'}</div>
+    <img src="${esc(picFor(p))}" alt=""><div class="wpN">${esc(cur.prize)}</div><div class="wpS">Tap to continue</div></div>
+    ${Xmas.active ? '<img class="wpSanta" src="santa-standing.webp" alt="">' : ''}`;
+  w.addEventListener('click', () => w.remove());
+  document.body.appendChild(w);
+  setTimeout(() => w.remove(), 4500);
 }
 function printCoupon(){
   if (!cur) return;
@@ -303,7 +325,8 @@ $('giveNow').addEventListener('click', async () => {
   b.textContent = 'Gift given ✓';
 });
 $('next').addEventListener('click', () => { cur = null; ['fBill','fAmt','fMob'].forEach(i => $(i).value = ''); $('play').hidden = true; $('entry').hidden = false; $('fBill').focus(); });
-addEventListener('resize', () => { if (!$('play').hidden && !revealed) paintFoil(); });
+// only redraw the cover if the card really changed size and nobody has started scratching
+addEventListener('resize', () => { if ($('play').hidden || revealed || scratched) return; if (Math.round(cv.getBoundingClientRect().width) !== foilW) paintFoil(); });
 
 /* ---------- redeem ---------- */
 $('rdForm').addEventListener('submit', e => { e.preventDefault(); checkCode($('rdCode').value.trim().toUpperCase()); });
