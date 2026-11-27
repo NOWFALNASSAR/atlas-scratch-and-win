@@ -1,6 +1,6 @@
 // @less fashion Scratch & Win - makes the app installable and loads fast on shop Wi-Fi
-const CACHE = 'sw-app-v4';
-const SHELL = ['/counter.html', '/admin.html', '/index.html', '/style.css', '/xmas.css', '/common.js', '/xmas.js', '/config.js', '/manifest.webmanifest', '/icon-192.png', '/icon-512.png', '/img/gift-box.webp', '/img/gift-box-tall.webp', '/img/santa-standing.webp', '/img/santa-box.webp'];
+const CACHE = 'sw-app-v5';
+const SHELL = ['/counter.html', '/admin.html', '/index.html', '/style.css', '/xmas.css', '/common.js', '/xmas.js', '/config.js', '/manifest.webmanifest', '/icon-192.png', '/icon-512.png', '/gift-box.webp', '/gift-box-tall.webp', '/santa-standing.webp', '/santa-box.webp'];
 self.addEventListener('install', e => { e.waitUntil(caches.open(CACHE).then(c => c.addAll(SHELL)).then(() => self.skipWaiting())); });
 self.addEventListener('activate', e => { e.waitUntil(caches.keys().then(ks => Promise.all(ks.filter(k => k !== CACHE).map(k => caches.delete(k)))).then(() => self.clients.claim())); });
 self.addEventListener('fetch', e => {

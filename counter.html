@@ -30,7 +30,7 @@
 </header>
 <main>
 <section id="v-login" class="col" hidden>
-  <img id="loginArt" src="img/gift-box-tall.webp" alt="@less സമ്മാനപ്പെട്ടി">
+  <img id="loginArt" src="gift-box-tall.webp" alt="@less സമ്മാനപ്പെട്ടി">
   <h2>Branch login</h2>
   <p class="note">Enter the 6-digit branch PIN from Head Office. You only need to do this once on this tablet.</p>
   <form id="loginForm" novalidate>
@@ -43,7 +43,7 @@
 
 <section id="v-scratch" class="col" hidden>
   <form id="entry" novalidate>
-    <div id="heroRow"><img id="heroArt" src="img/gift-box.webp" alt="@less സമ്മാനപ്പെട്ടി"><img id="heroSanta" src="img/santa-standing.webp" alt="Christmas Pappaji"></div>
+    <div id="heroRow"><img id="heroArt" src="gift-box.webp" alt="@less സമ്മാനപ്പെട്ടി"><img id="heroSanta" src="santa-standing.webp" alt="Christmas Pappaji"></div>
     <div id="xmasBanner">Merry Christmas<small>Shop, scratch &amp; win gifts from Pappaji at <span data-brand>@less fashion</span></small></div>
     <h2>Bill details</h2>
     <div class="row2">
@@ -220,8 +220,8 @@ $('secGo').addEventListener('click', async () => {
 
 const cv = $('cv'), ctx = cv.getContext('2d', {willReadFrequently: true});
 let drawing = false, moves = 0, revealed = false, logoImg = null;
-const foilArt = new Image(); foilArt.src = 'img/gift-box-tall.webp'; foilArt.onload = () => { if (!$('play').hidden && !revealed) paintFoil(); };
-const winArt = new Image(); winArt.src = 'img/santa-box.webp'; const winArt2 = new Image(); winArt2.src = 'img/gift-box.webp';
+const foilArt = new Image(); foilArt.src = 'gift-box-tall.webp'; foilArt.onload = () => { if (!$('play').hidden && !revealed) paintFoil(); };
+const winArt = new Image(); winArt.src = 'santa-box.webp'; const winArt2 = new Image(); winArt2.src = 'gift-box.webp';
 function paintFoil(){
   const r = cv.getBoundingClientRect(), dpr = devicePixelRatio || 1;
   cv.width = Math.round(r.width * dpr); cv.height = Math.round(r.height * dpr); cv.style.opacity = 1; revealed = false;
