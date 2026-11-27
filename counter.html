@@ -46,8 +46,7 @@
       <div><label for="fBill">Bill number</label><input id="fBill" autocomplete="off"></div>
       <div><label for="fAmt">Bill amount (₹)</label><input id="fAmt" type="number" inputmode="numeric" min="0"></div>
     </div>
-    <label for="fName">Customer name</label><input id="fName" autocomplete="off">
-    <label for="fMob">Mobile number</label><input id="fMob" type="tel" inputmode="numeric" maxlength="10" autocomplete="off">
+    <label for="fMob">Customer mobile number</label><input id="fMob" type="tel" inputmode="numeric" maxlength="10" autocomplete="off">
     <div class="err" id="fErr" role="alert"></div>
     <button class="btn gold w" type="submit" id="goBtn">Get scratch card</button>
     <p class="note" id="minNote"></p>
@@ -64,6 +63,12 @@
         <button class="btn dark" id="printCoupon" type="button">Print coupon</button>
         <a class="btn wa" id="waBtn" target="_blank" rel="noopener">Send on WhatsApp</a>
         <button class="btn gold" id="giveNow" type="button" hidden>Give gift now</button>
+      </div>
+      <div class="card" id="second" hidden style="margin-top:14px">
+        <b>This bill can get a 2nd scratch card.</b>
+        <p class="note" style="margin:4px 0 8px">Only if the branch manager approves: enter the branch PIN.</p>
+        <div class="flex"><input id="secPin" type="password" inputmode="numeric" maxlength="6" placeholder="Branch PIN" style="flex:1 1 160px"><button class="btn gold" id="secGo" type="button">Give 2nd scratch card</button></div>
+        <p class="err" id="secErr"></p>
       </div>
       <p class="err" id="giveErr"></p>
       <button class="btn w" id="next" type="button">Next customer</button>
@@ -162,26 +167,37 @@ $('logout').addEventListener('click', () => { store.del('session'); sess = null;
 /* ---------- scratch ---------- */
 $('entry').addEventListener('submit', async e => {
   e.preventDefault();
-  const bill = $('fBill').value.trim(), amt = Number($('fAmt').value), name = $('fName').value.trim(), mob = $('fMob').value.replace(/\D/g, '');
+  const bill = $('fBill').value.trim(), amt = Number($('fAmt').value), mob = $('fMob').value.replace(/\D/g, '');
   const err = m => { $('fErr').textContent = m; };
   if (!bill) return err('Enter the bill number.');
   if (!amt) return err('Enter the bill amount.');
   if (amt < Number(sess.min_bill)) return err(`This bill is ${rupee(amt)}. Minimum ${rupee(sess.min_bill)} is needed for a scratch.`);
-  if (!name) return err('Enter the customer name.');
   if (!/^[6-9]\d{9}$/.test(mob)) return err('Enter a valid 10-digit mobile number.');
   err(''); $('goBtn').disabled = true; $('goBtn').textContent = 'Please wait…';
-  const {data, error} = await sb.rpc('do_scratch', {p_pin: sess.pin, p_bill: bill, p_amount: amt, p_name: name, p_mobile: mob});
+  const {data, error} = await sb.rpc('do_scratch', {p_pin: sess.pin, p_bill: bill, p_amount: amt, p_name: '', p_mobile: mob});
   $('goBtn').disabled = false; $('goBtn').textContent = 'Get scratch card';
   if (error) return err(errText(error));
+  startCard(data);
+});
+function startCard(data){
   cur = data;
   const p = (sess.prizes || []).find(x => x.id === cur.prize_id);
   const face = $('face');
   if (p && p.image) { face.className = 'face photo'; face.style.backgroundImage = `url("${p.image}")`; }
   else { face.className = 'face'; face.style.backgroundImage = ''; }
   $('entry').hidden = true; $('play').hidden = false; $('res').hidden = true; $('giveErr').textContent = '';
-  $('hi').textContent = `${cur.name}, scratch the card with your finger!`;
+  $('hi').textContent = cur.card_no === 2 ? '2nd scratch card – scratch the gold card with your finger!' : 'Scratch the gold card with your finger!';
   $('pName').textContent = cur.prize; $('pType').textContent = TYPES[cur.type] || '';
+  window.scrollTo({top: 0, behavior: 'smooth'});
   requestAnimationFrame(paintFoil);
+}
+$('secGo').addEventListener('click', async () => {
+  if ($('secPin').value.trim() !== sess.pin) { $('secErr').textContent = 'Wrong PIN. Only the branch manager can give a 2nd card.'; return; }
+  const b = $('secGo'); b.disabled = true; $('secErr').textContent = '';
+  const {data, error} = await sb.rpc('do_scratch', {p_pin: sess.pin, p_bill: cur.bill, p_amount: cur.amount, p_name: '', p_mobile: cur.mobile, p_card: 2});
+  b.disabled = false;
+  if (error) { $('secErr').textContent = errText(error); return; }
+  startCard(data);
 });
 
 const cv = $('cv'), ctx = cv.getContext('2d', {willReadFrequently: true});
@@ -224,10 +240,11 @@ function reveal(){
   if (revealed || !cur) return; revealed = true; cv.style.opacity = 0; setTimeout(() => ctx.clearRect(0, 0, cv.width, cv.height), 650); confetti();
   $('rType').textContent = TYPES[cur.type] || ''; $('rCode').textContent = cur.code; $('rExp').textContent = `Valid till ${fmtD(cur.expires_on)}`;
   const how = cur.type === 'voucher' ? 'Show this code on your next purchase.' : 'Show this code at the shop counter to collect your gift.';
-  const msg = `Hi ${cur.name},\nCongratulations! You won ${cur.prize} in the ${brand} ${cur.campaign} Scratch & Win!\nCoupon code: ${cur.code}\n${how}\nValid till ${fmtD(cur.expires_on)}.\nThank you, visit again! – ${brand}, ${cur.branch}`;
+  const msg = `Hi,\nCongratulations! You won ${cur.prize} in the ${brand} ${cur.campaign} Scratch & Win!\nCoupon code: ${cur.code}\n${how}\nValid till ${fmtD(cur.expires_on)}.\nThank you, visit again! – ${brand}, ${cur.branch}`;
   $('rMsg').textContent = msg;
   $('waBtn').href = `https://wa.me/91${cur.mobile}?text=${encodeURIComponent(msg)}`;
   $('giveNow').hidden = !cur.has_item; $('giveNow').disabled = false; $('giveNow').textContent = 'Give gift now';
+  $('second').hidden = !cur.second_allowed; $('secPin').value = ''; $('secErr').textContent = '';
   $('res').hidden = false;
   if (store.get('autoPrint') === '1') printCoupon();
 }
@@ -237,8 +254,8 @@ function printCoupon(){
   printSlip(`${sess.logo ? `<img src="${sess.logo}" alt="">` : ''}
     <div class="c l">${esc(brand)}</div><div class="c">SCRATCH &amp; WIN</div><div class="c">${esc(cur.campaign)}</div><hr>
     ${kv('Branch', cur.branch)}${kv('Date', fmtDT(cur.at))}${kv('Bill no', cur.bill)}${kv('Bill amount', rupee(cur.amount))}
-    ${kv('Customer', cur.name)}${kv('Mobile', '******' + String(cur.mobile).slice(-4))}<hr>
-    <div class="c">YOU WON</div><div class="c xl">${esc(cur.prize)}</div><div class="c">${esc(TYPES[cur.type] || '')}</div><hr>
+    ${kv('Mobile', '******' + String(cur.mobile).slice(-4))}<hr>
+    ${cur.card_no === 2 ? '<div class="c b">2nd SCRATCH CARD</div>' : ''}<div class="c">YOU WON</div><div class="c xl">${esc(cur.prize)}</div><div class="c">${esc(TYPES[cur.type] || '')}</div><hr>
     <div class="c">Coupon code</div><div class="c xl">${esc(cur.code)}</div><div class="c b">Valid till ${fmtD(cur.expires_on)}</div><hr>
     <div class="c">${esc(how)}</div><div class="c">${esc(sess.terms || '')}</div><div class="c">Thank you, visit again!</div>`);
 }
@@ -249,7 +266,7 @@ $('giveNow').addEventListener('click', async () => {
   if (error) { $('giveErr').textContent = errText(error); b.disabled = false; return; }
   b.textContent = 'Gift given ✓';
 });
-$('next').addEventListener('click', () => { cur = null; ['fBill','fAmt','fName','fMob'].forEach(i => $(i).value = ''); $('play').hidden = true; $('entry').hidden = false; $('fBill').focus(); });
+$('next').addEventListener('click', () => { cur = null; ['fBill','fAmt','fMob'].forEach(i => $(i).value = ''); $('play').hidden = true; $('entry').hidden = false; $('fBill').focus(); });
 addEventListener('resize', () => { if (!$('play').hidden && !revealed) paintFoil(); });
 
 /* ---------- redeem ---------- */
@@ -266,7 +283,7 @@ async function checkCode(code){
   out.innerHTML = `<div class="res">${pill}
     <div class="big" style="font-size:28px;margin:10px 0 4px">${esc(s.prize)}</div>
     <table><tbody>
-    <tr><th>Customer</th><td>${esc(s.name)} · ${esc(s.mobile)}</td></tr>
+    <tr><th>Customer</th><td>${s.name ? esc(s.name) + ' · ' : ''}${esc(s.mobile)}</td></tr>
     <tr><th>Scratched at</th><td>${esc(s.branch)} · ${fmtD(s.day)} · Bill ${esc(s.bill)}</td></tr>
     <tr><th>Valid till</th><td>${fmtD(s.expires_on)}</td></tr>${stockLine}
     ${s.status === 'used' ? `<tr><th>Used at</th><td>${esc(s.used_branch)} · ${fmtDT(s.used_at)}</td></tr>` : ''}

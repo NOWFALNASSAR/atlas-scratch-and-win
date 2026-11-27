@@ -25,7 +25,13 @@ window.App = (() => {
     MOBILE_BAD:'Enter a valid 10-digit mobile number.',
     BILL_USED:'This bill number has already been used for a scratch.',
     MOBILE_TODAY:'This mobile number has already scratched today.',
-    NO_PRIZE:'No prizes are set up. Please call Head Office.',
+    NO_PRIZE:'No prize is set for this bill amount. Please call Head Office.',
+    NO_SLAB:'This bill amount is not in any chance slab. Please call Head Office.',
+    BILL_RANGE:'This bill number is not in the valid bill number range for this offer.',
+    NO_FIRST_CARD:'This bill has no first scratch card yet.',
+    NO_SECOND_CARD:'This bill amount does not qualify for a 2nd scratch card.',
+    SECOND_USED:'This bill already got its 2nd scratch card.',
+    RANGE_BAD:'"Bill no. from" must be smaller than "Bill no. to".',
     NOT_REDEEMABLE:'This coupon cannot be redeemed (already used or expired).',
     NO_STOCK:'Not enough stock for this item at this location.',
     ALREADY_CLOSED:'This day is already closed for this branch.',
@@ -34,12 +40,14 @@ window.App = (() => {
     SAME_LOCATION:'From and To cannot be the same.',
     PIN_TAKEN:'Another branch already uses this PIN. Choose a different PIN.',
     PIN_FORMAT:'PIN must be 6 digits (numbers only).',
-    NOT_ADMIN:'Please log in again.'
+    NOT_ADMIN:'Only the admin can do this.',
+    NO_ROLE:'Your login has no access yet. Ask the admin to add you in Users.'
   };
   const errText = e => {
     const m = (e && e.message) || String(e || '');
     for (const k in ERR) if (m.includes(k)) return ERR[k];
     if (/duplicate key/i.test(m) && /name/i.test(m)) return 'This name already exists.';
+    if (/row-level security/i.test(m)) return 'You do not have permission to change this.';
     return /fetch|network|Failed/i.test(m) ? 'Internet connection problem. Please try again.' : 'Something went wrong: ' + m;
   };
   const sb = configured ? window.supabase.createClient(C.SUPABASE_URL, C.SUPABASE_ANON_KEY) : null;

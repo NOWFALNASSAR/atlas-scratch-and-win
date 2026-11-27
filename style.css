@@ -57,6 +57,7 @@ td.n,th.n{text-align:right;white-space:nowrap}
 td.neg{color:var(--bad);font-weight:700}td.pos{color:var(--ok);font-weight:700}
 td input,td select{min-height:40px;padding:6px 8px}
 #pzTable select{min-width:120px}#pzTable select[data-k=active]{min-width:84px}#pzTable input[data-k=name]{min-width:150px}
+input:disabled,select:disabled{background:var(--card);color:var(--mut);cursor:not-allowed}
 tr.click{cursor:pointer}tr.click:hover{background:var(--card)}
 .flex{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
 .between{justify-content:space-between}

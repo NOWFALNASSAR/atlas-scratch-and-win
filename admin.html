@@ -25,6 +25,7 @@
     <button role="tab" data-v="branches">Branches</button>
     <button role="tab" data-v="camp">Campaign &amp; branding</button>
     <button role="tab" data-v="log">Scratch log</button>
+    <button role="tab" data-v="users">Users</button>
   </nav>
 </header>
 <main>
@@ -114,17 +115,27 @@
   <div class="warn" id="pzWarn"></div>
   <button class="btn ghost sm" id="addPz" type="button" style="margin-top:12px">+ Add prize</button>
   <input type="file" id="pzFile" accept="image/*" hidden>
+
+  <div class="box">
+    <div class="flex between"><h3 style="margin:0">Chance % by bill amount</h3><button class="btn sm" id="addSlab" type="button">+ Add amount slab</button></div>
+    <p class="note">Make one column for each bill amount slab (e.g. ₹1,000–₹4,999, ₹5,000 and above) and type the % chance of each prize in that slab. Each column should total 100%. If a prize is out of stock or over its daily limit, its % is shared among the other prizes in that slab. When no slabs are set, the "Weight" column above is used instead.</p>
+    <div class="scroll"><table id="slabTable" class="sticky1"></table></div>
+    <p class="warn" id="slabWarn"></p>
+  </div>
 </section>
 
 <!-- Branches -->
 <section id="v-branches" hidden>
   <h2>Branches</h2>
   <p class="note">Give each branch a different 6-digit PIN, and share it only with that branch manager. To change a PIN, type the new one and Save; the old PIN stops working immediately.</p>
+  <p class="note"><b>Valid bill numbers:</b> only bills whose number is inside this range can get a scratch card (leave empty for no limit). For bill numbers like "TDP/2026/1234" the last number (1234) is used.</p>
   <div class="scroll"><table class="stack" id="brList"></table></div>
   <div class="box"><h3>New branch</h3>
     <form id="brForm" class="flex" novalidate>
       <input id="brName" placeholder="Branch name" style="flex:2 1 220px">
       <input id="brPin" placeholder="6-digit PIN" inputmode="numeric" maxlength="6" style="flex:1 1 140px">
+      <input id="brFrom" type="number" min="0" placeholder="Bill no. from" style="flex:1 1 130px">
+      <input id="brTo" type="number" min="0" placeholder="Bill no. to" style="flex:1 1 130px">
       <button class="btn sm" type="submit">Add</button>
     </form>
     <p class="err" id="brErr"></p>
@@ -152,6 +163,7 @@
       <div><label for="cStart">Start date</label><input id="cStart" type="date"></div>
       <div><label for="cEnd">End date</label><input id="cEnd" type="date"></div>
       <div><label for="cOnce">One scratch per mobile per day</label><select id="cOnce"><option value="1">Yes</option><option value="0">No</option></select></div>
+      <div><label for="cSecond">2nd scratch card for bills from ₹ (empty = off)</label><input id="cSecond" type="number" min="0" placeholder="e.g. 5000"></div>
       <div><label for="cActive">Offer on / off</label><select id="cActive"><option value="1">On</option><option value="0">Off</option></select></div>
     </div>
     <p class="note">If dates are left empty, the offer runs every day while it is On.</p>
@@ -172,6 +184,38 @@
   <table class="stack" id="logTable"></table>
 </section>
 
+<!-- Users -->
+<section id="v-users" hidden>
+  <h2>Head Office users</h2>
+  <div class="card" style="margin-bottom:16px">
+    <p class="note" style="margin:0"><b>To add a person:</b> 1) In Supabase → Authentication → Users → <b>Add user</b>, create their login (email + password, tick Auto Confirm). 2) Add the same email here and choose the role. They can then log in at this admin page.</p>
+  </div>
+  <table class="stack" id="usTable"></table>
+  <div class="box"><h3>Add user</h3>
+    <form id="usForm" class="flex" novalidate>
+      <input id="usEmail" type="email" placeholder="Email" style="flex:2 1 220px">
+      <input id="usName" placeholder="Name" style="flex:1 1 150px">
+      <select id="usRole" style="flex:1 1 160px" aria-label="Role"></select>
+      <button class="btn sm" type="submit">Add</button>
+    </form>
+    <p class="err" id="usErr"></p>
+  </div>
+  <div class="box"><h3>What each role can do</h3>
+    <table><thead><tr><th>Role</th><th>Can see</th><th>Can change</th></tr></thead><tbody>
+      <tr><td><b>Admin</b></td><td>Everything</td><td>Everything</td></tr>
+      <tr><td><b>Marketing</b></td><td>Dashboard, Stock, Prizes, Campaign &amp; branding, Scratch log</td><td>Prizes, Campaign &amp; branding</td></tr>
+      <tr><td><b>Sales Manager</b></td><td>Dashboard, Stock, Day closings, Prizes, Scratch log</td><td>Nothing (view only)</td></tr>
+      <tr><td><b>Accounts Manager</b></td><td>Dashboard + Excel download, Stock &amp; movements, Day closings, Scratch log</td><td>Nothing (view only)</td></tr>
+    </tbody></table>
+  </div>
+</section>
+
+<section id="v-norole" class="col" hidden>
+  <h2>No access yet</h2>
+  <p>You are logged in as <b id="nrEmail"></b>, but this email has not been given a role. Ask the admin to add you in the <b>Users</b> tab.</p>
+  <button class="btn" id="nrLogout" type="button">Logout</button>
+</section>
+
 <section id="v-config" class="col" hidden>
   <h2>Setup not complete</h2>
   <p>Supabase URL and anon key are not set in config.js. See the setup guide.</p>
@@ -189,9 +233,9 @@ const locName = id => id == null || id === '' ? 'Head Office' : ((branches.find(
 const brName = id => (branches.find(b => b.id === id) || {}).name || '';
 
 function view(v){
-  ['login','dash','stock','closings','prizes','branches','camp','log','config'].forEach(x => { $('v-'+x).hidden = x !== v; });
+  ['login','dash','stock','closings','prizes','branches','camp','log','users','norole','config'].forEach(x => { $('v-'+x).hidden = x !== v; });
   document.querySelectorAll('#tabs button').forEach(b => b.setAttribute('aria-selected', b.dataset.v === v));
-  ({dash:loadDash, stock:loadStock, closings:loadClosings, prizes:loadPrizes, branches:loadBranches, camp:loadCamp, log:loadLog})[v]?.();
+  ({dash:loadDash, stock:loadStock, closings:loadClosings, prizes:loadPrizes, branches:loadBranches, camp:loadCamp, log:loadLog, users:loadUsers})[v]?.();
 }
 document.querySelectorAll('#tabs button').forEach(b => b.addEventListener('click', () => view(b.dataset.v)));
 
@@ -199,10 +243,37 @@ async function boot(){
   if (!configured) { view('config'); return; }
   const {data: {session}} = await sb.auth.getSession();
   if (!session) { $('who').hidden = true; $('tabs').hidden = true; view('login'); return; }
-  $('who').hidden = false; $('tabs').hidden = false; $('meLbl').textContent = session.user.email;
+  const {data: me, error: meErr} = await sb.rpc('my_role');
+  if (meErr || !me || !me.role) { $('who').hidden = true; $('tabs').hidden = true; $('nrEmail').textContent = session.user.email; view('norole'); return; }
+  role = me.role;
+  document.querySelectorAll('#tabs button').forEach(b => { b.hidden = !ROLE_TABS[role].includes(b.dataset.v); });
+  $('who').hidden = false; $('tabs').hidden = false; $('meLbl').textContent = `${me.name || session.user.email} · ${ROLES[role]}`;
   await Promise.all([loadBranchList(), loadItems(), loadCampData()]);
   view('dash');
 }
+$('nrLogout').addEventListener('click', async () => { await sb.auth.signOut(); boot(); });
+
+/* ---------- roles: what each person can see and change ---------- */
+const ROLES = {admin: 'Admin', marketing: 'Marketing', sales: 'Sales Manager', accounts: 'Accounts Manager'};
+const ROLE_TABS = {
+  admin:     ['dash','stock','closings','prizes','branches','camp','log','users'],
+  marketing: ['dash','stock','prizes','camp','log'],
+  sales:     ['dash','stock','closings','prizes','log'],
+  accounts:  ['dash','stock','closings','log']
+};
+let role = null;
+const canEdit = area => role === 'admin' || (role === 'marketing' && (area === 'prizes' || area === 'camp'));
+function applyLocks(){
+  if (!role) return;
+  const lock = (sel, on) => document.querySelectorAll(sel).forEach(el => { el.disabled = on; });
+  const hide = (ids, on) => ids.forEach(id => { if ($(id)) $(id).hidden = on; });
+  hide(['inForm','trForm','itForm'], !canEdit('stock'));
+  lock('#itTable input, #itTable select', !canEdit('stock'));
+  lock('#pzTable input, #pzTable select, #pzTable button, #slabTable input, #slabTable button', !canEdit('prizes')); hide(['addPz','addSlab'], !canEdit('prizes'));
+  lock('#campForm input, #campForm select, #campForm button', !canEdit('camp'));
+  const cf = document.querySelector('#campForm button[type=submit]'); if (cf) cf.hidden = !canEdit('camp');
+}
+let lockT; new MutationObserver(() => { clearTimeout(lockT); lockT = setTimeout(applyLocks, 30); }).observe(document.querySelector('main'), {childList: true, subtree: true});
 $('loginForm').addEventListener('submit', async e => {
   e.preventDefault(); $('loginErr').textContent = '';
   const {error} = await sb.auth.signInWithPassword({email: $('email').value.trim(), password: $('pass').value});
@@ -215,7 +286,7 @@ $('loginForm').addEventListener('submit', async e => {
 $('logout').addEventListener('click', async () => { await sb.auth.signOut(); boot(); });
 
 async function loadBranchList(){
-  const {data} = await sb.from('branches').select('id,name,active').order('name'); branches = data || [];
+  const {data} = await sb.from('branches').select('id,name,active,bill_from,bill_to').order('name'); branches = data || [];
   $('qBr').innerHTML = '<option value="">All branches</option>' + branches.map(b => `<option value="${b.id}">${esc(b.name)}</option>`).join('');
   const locOpts = '<option value="">Head Office</option>' + branches.filter(b => b.active).map(b => `<option value="${b.id}">${esc(b.name)}</option>`).join('');
   ['inLoc','trFrom','trTo'].forEach(id => { const keep = $(id).value; $(id).innerHTML = locOpts; $(id).value = keep; });
@@ -371,23 +442,25 @@ $('cdTable').addEventListener('click', async e => {
 /* ---------- prizes ---------- */
 async function loadPrizes(){
   await loadItems();
-  const [{data: p}, {data: t}] = await Promise.all([
+  const [{data: p}, {data: t}, {data: sl}, {data: sp}] = await Promise.all([
     sb.from('prizes').select('*').order('sort').order('id'),
-    sb.from('scratches').select('prize_id').eq('day', today()).limit(10000)]);
-  prizes = p || []; const given = {}; (t || []).forEach(x => { given[x.prize_id] = (given[x.prize_id] || 0) + 1; });
+    sb.from('scratches').select('prize_id').eq('day', today()).limit(10000),
+    sb.from('slabs').select('*').order('min_amount'),
+    sb.from('slab_prizes').select('*')]);
+  prizes = p || []; slabs = sl || []; slabPct = {}; (sp || []).forEach(r => { slabPct[r.slab_id + ':' + r.prize_id] = Number(r.percent); }); const given = {}; (t || []).forEach(x => { given[x.prize_id] = (given[x.prize_id] || 0) + 1; });
   const tot = prizes.filter(x => x.active).reduce((a, x) => a + Number(x.weight), 0) || 1;
   const itemOpts = sel => '<option value="">– none –</option>' + items.map(i => `<option value="${i.id}"${i.id === sel ? ' selected' : ''}>${esc(i.name)}</option>`).join('');
-  $('pzTable').innerHTML = `<thead><tr><th>Picture</th><th>Prize</th><th>Type</th><th>Stock item</th><th class="n">Weight</th><th class="n">Chance</th><th class="n">Limit/day</th><th class="n">Given today</th><th>On/Off</th></tr></thead><tbody>` +
+  $('pzTable').innerHTML = `<thead><tr><th>Picture</th><th>Prize</th><th>Type</th><th>Stock item</th>${slabs.length ? '' : '<th class="n">Weight</th><th class="n">Chance</th>'}<th class="n">Limit/day</th><th class="n">Given today</th><th>On/Off</th></tr></thead><tbody>` +
     prizes.map(x => `<tr><td><div class="flex" style="gap:6px">${x.image ? `<img class="thumb" src="${x.image}" alt="">` : '<span class="thumb"></span>'}<button class="btn ghost sm" type="button" data-img="${x.id}">${x.image ? 'Change' : 'Add'}</button>${x.image ? `<button class="btn ghost sm" type="button" data-noimg="${x.id}" aria-label="Remove picture">×</button>` : ''}</div></td>
      <td><input data-id="${x.id}" data-k="name" value="${esc(x.name)}" aria-label="Prize"></td>
      <td><select data-id="${x.id}" data-k="type" aria-label="Type">${Object.entries(TYPES).map(([k, v]) => `<option value="${k}"${k === x.type ? ' selected' : ''}>${v}</option>`).join('')}</select></td>
      <td><select data-id="${x.id}" data-k="item_id" aria-label="Stock item">${itemOpts(x.item_id)}</select></td>
-     <td class="n"><input data-id="${x.id}" data-k="weight" type="number" min="0" step="0.5" value="${esc(x.weight)}" style="width:80px" aria-label="Weight"></td>
-     <td class="n">${x.active ? (Number(x.weight) / tot * 100).toFixed(1) + '%' : '–'}</td>
+     ${slabs.length ? '' : `<td class="n"><input data-id="${x.id}" data-k="weight" type="number" min="0" step="0.5" value="${esc(x.weight)}" style="width:80px" aria-label="Weight"></td>
+     <td class="n">${x.active ? (Number(x.weight) / tot * 100).toFixed(1) + '%' : '–'}</td>`}
      <td class="n"><input data-id="${x.id}" data-k="daily_limit" type="number" min="0" value="${esc(x.daily_limit)}" style="width:80px" aria-label="Limit"></td>
      <td class="n">${num(given[x.id] || 0)}</td>
      <td><select data-id="${x.id}" data-k="active" aria-label="On/Off"><option value="1"${x.active ? ' selected' : ''}>On</option><option value="0"${x.active ? '' : ' selected'}>Off</option></select></td></tr>`).join('') + '</tbody>';
-  $('pzWarn').textContent = prizes.some(x => x.active && Number(x.weight) > 0 && !Number(x.daily_limit) && !x.item_id) ? '' : 'At least one prize must be On with limit 0 and no stock item (e.g. a voucher), so there is always something to win.';
+  renderSlabs();
 }
 $('pzTable').addEventListener('change', async e => {
   const t = e.target, id = t.dataset.id, k = t.dataset.k; if (!id) return;
@@ -395,6 +468,53 @@ $('pzTable').addEventListener('change', async e => {
   const {error} = await sb.from('prizes').update({[k]: v}).eq('id', id);
   if (error) $('pzWarn').textContent = errText(error); else loadPrizes();
 });
+/* ---------- chance slabs by bill amount ---------- */
+let slabs = [], slabPct = {};
+function renderSlabs(){
+  const act = prizes.filter(x => x.active);
+  if (!slabs.length) { $('slabTable').innerHTML = '<tr><td class="note">No slabs yet – prize "Weight" is used for every bill. Press "+ Add amount slab" to set % by bill amount.</td></tr>'; $('slabWarn').textContent = ''; return; }
+  const tot = s => act.reduce((a, x) => a + (slabPct[s.id + ':' + x.id] || 0), 0);
+  $('slabTable').innerHTML = `<thead><tr><th>Prize</th>${slabs.map(s => `<th class="n" style="min-width:170px"><div class="flex" style="gap:4px;justify-content:flex-end">
+      <input data-slab="${s.id}" data-k="min_amount" type="number" min="0" value="${esc(s.min_amount)}" style="width:86px" aria-label="From amount">
+      <span>–</span><input data-slab="${s.id}" data-k="max_amount" type="number" min="0" value="${s.max_amount ?? ''}" placeholder="above" style="width:86px" aria-label="To amount">
+      <button class="btn ghost sm" type="button" data-delslab="${s.id}" aria-label="Delete slab" style="min-height:36px;padding:4px 10px">×</button></div></th>`).join('')}</tr></thead><tbody>` +
+    act.map(x => `<tr><td>${esc(x.name)}</td>${slabs.map(s => `<td class="n"><input data-sp="${s.id}:${x.id}" type="number" min="0" max="100" step="1" value="${slabPct[s.id + ':' + x.id] || ''}" placeholder="0" style="width:80px" aria-label="${esc(x.name)} %"> %</td>`).join('')}</tr>`).join('') +
+    `<tr><td class="b">Total</td>${slabs.map(s => { const t = tot(s); return `<td class="n b ${Math.abs(t - 100) < 0.01 ? 'pos' : 'neg'}">${t}%</td>`; }).join('')}</tr></tbody>`;
+  const w = [];
+  slabs.forEach(s => { const t = tot(s); if (Math.abs(t - 100) > 0.01) w.push(`Slab ${rupee(s.min_amount)}${s.max_amount != null ? '–' + rupee(s.max_amount) : '+'} totals ${t}% (should be 100%).`);
+    if (!act.some(x => (slabPct[s.id + ':' + x.id] || 0) > 0 && !Number(x.daily_limit) && !x.item_id)) w.push(`Slab ${rupee(s.min_amount)}${s.max_amount != null ? '–' + rupee(s.max_amount) : '+'} has no always-available prize (limit 0, no stock item). If its gifts run out, bills in this slab get an error.`); });
+  const mb = Number(camp.min_bill || 0), sorted = [...slabs].sort((p, q) => p.min_amount - q.min_amount);
+  if (sorted.length && Number(sorted[0].min_amount) > mb) w.push(`Bills from ${rupee(mb)} to ${rupee(Number(sorted[0].min_amount) - 1)} are in no slab.`);
+  for (let i = 0; i < sorted.length - 1; i++) { const a = sorted[i], b = sorted[i + 1];
+    if (a.max_amount == null || Number(a.max_amount) >= Number(b.min_amount)) w.push(`Slabs starting ${rupee(a.min_amount)} and ${rupee(b.min_amount)} overlap.`);
+    else if (Number(a.max_amount) + 1 < Number(b.min_amount)) w.push(`Bills from ${rupee(Number(a.max_amount) + 1)} to ${rupee(Number(b.min_amount) - 1)} are in no slab.`); }
+  const last = sorted[sorted.length - 1]; if (last && last.max_amount != null) w.push(`Bills above ${rupee(last.max_amount)} are in no slab – leave the last "to" empty.`);
+  $('slabWarn').innerHTML = w.map(esc).join('<br>');
+}
+$('addSlab').addEventListener('click', async () => {
+  // new slab goes on top; if the current top slab is open-ended ("and above"), close it just below the new one
+  const sorted = [...slabs].sort((p, q) => p.min_amount - q.min_amount), last = sorted[sorted.length - 1];
+  let top = Number(camp.min_bill || 0);
+  if (last) { top = last.max_amount != null ? Number(last.max_amount) + 1 : Number(last.min_amount) + 5000;
+    if (last.max_amount == null) { const {error: e1} = await sb.from('slabs').update({max_amount: top - 1}).eq('id', last.id); if (e1) { $('slabWarn').textContent = errText(e1); return; } } }
+  const {error} = await sb.from('slabs').insert({min_amount: top, max_amount: null});
+  if (error) $('slabWarn').textContent = errText(error); else loadPrizes();
+});
+$('slabTable').addEventListener('change', async e => {
+  const t = e.target;
+  if (t.dataset.slab) { const k = t.dataset.k, v = t.value === '' ? (k === 'min_amount' ? 0 : null) : Math.max(0, Number(t.value) || 0);
+    const {error} = await sb.from('slabs').update({[k]: v}).eq('id', t.dataset.slab); if (error) $('slabWarn').textContent = errText(error); else loadPrizes(); return; }
+  if (t.dataset.sp) { const [sid, pid] = t.dataset.sp.split(':').map(Number), v = Math.max(0, Number(t.value) || 0);
+    const {error} = v ? await sb.from('slab_prizes').upsert({slab_id: sid, prize_id: pid, percent: v}) : await sb.from('slab_prizes').delete().eq('slab_id', sid).eq('prize_id', pid);
+    if (error) $('slabWarn').textContent = errText(error); else { slabPct[sid + ':' + pid] = v; renderSlabs(); } }
+});
+let delArm = null;
+$('slabTable').addEventListener('click', async e => {
+  const id = e.target.dataset.delslab; if (!id) return;
+  if (delArm !== id) { delArm = id; e.target.textContent = 'Delete?'; setTimeout(() => { delArm = null; if (e.target.isConnected) e.target.textContent = '×'; }, 3000); return; }
+  const {error} = await sb.from('slabs').delete().eq('id', id); if (error) $('slabWarn').textContent = errText(error); else loadPrizes();
+});
+
 let imgFor = null;
 $('pzTable').addEventListener('click', async e => {
   const a = e.target.dataset.img, r = e.target.dataset.noimg;
@@ -414,25 +534,28 @@ $('addPz').addEventListener('click', async () => {
 });
 
 /* ---------- branches ---------- */
+const numOrNull = v => v === '' || v == null ? null : Math.max(0, Number(v) || 0);
 async function loadBranches(){
   await loadBranchList();
-  $('brList').innerHTML = `<thead><tr><th>Branch</th><th>On/Off</th><th>New PIN (only to change)</th><th></th></tr></thead><tbody>` +
+  $('brList').innerHTML = `<thead><tr><th>Branch</th><th>Valid bill no. from</th><th>Bill no. to</th><th>On/Off</th><th>New PIN (only to change)</th><th></th></tr></thead><tbody>` +
     (branches.length ? branches.map(b => `<tr><td><input id="bn${b.id}" value="${esc(b.name)}" aria-label="Name"></td>
+      <td><input id="bf${b.id}" type="number" min="0" value="${b.bill_from ?? ''}" placeholder="any" style="width:110px" aria-label="Bill number from"></td>
+      <td><input id="bt${b.id}" type="number" min="0" value="${b.bill_to ?? ''}" placeholder="any" style="width:110px" aria-label="Bill number to"></td>
       <td><select id="ba${b.id}" aria-label="On/Off"><option value="1"${b.active ? ' selected' : ''}>On</option><option value="0"${b.active ? '' : ' selected'}>Off</option></select></td>
       <td><input id="bp${b.id}" inputmode="numeric" maxlength="6" placeholder="••••••" aria-label="New PIN"></td>
       <td><button class="btn sm" data-save="${b.id}" type="button">Save</button> <span class="note" id="bm${b.id}"></span></td></tr>`).join('')
-    : '<tr><td colspan="4">No branches yet. Add one below.</td></tr>') + '</tbody>';
+    : '<tr><td colspan="6">No branches yet. Add one below.</td></tr>') + '</tbody>';
 }
 $('brList').addEventListener('click', async e => {
   const id = e.target.dataset.save; if (!id) return;
-  const {error} = await sb.rpc('admin_save_branch', {p_id: Number(id), p_name: $('bn' + id).value, p_pin: $('bp' + id).value.trim() || null, p_active: $('ba' + id).value === '1'});
+  const {error} = await sb.rpc('admin_save_branch', {p_id: Number(id), p_name: $('bn' + id).value, p_pin: $('bp' + id).value.trim() || null, p_active: $('ba' + id).value === '1', p_bill_from: numOrNull($('bf' + id).value), p_bill_to: numOrNull($('bt' + id).value)});
   $('bm' + id).textContent = error ? errText(error) : 'Saved'; if (!error) { $('bp' + id).value = ''; loadBranchList(); }
 });
 $('brForm').addEventListener('submit', async e => {
   e.preventDefault(); $('brErr').textContent = '';
-  const {error} = await sb.rpc('admin_save_branch', {p_id: null, p_name: $('brName').value, p_pin: $('brPin').value.trim(), p_active: true});
+  const {error} = await sb.rpc('admin_save_branch', {p_id: null, p_name: $('brName').value, p_pin: $('brPin').value.trim(), p_active: true, p_bill_from: numOrNull($('brFrom').value), p_bill_to: numOrNull($('brTo').value)});
   if (error) { $('brErr').textContent = errText(error); return; }
-  $('brName').value = ''; $('brPin').value = ''; loadBranches();
+  $('brName').value = ''; $('brPin').value = ''; $('brFrom').value = ''; $('brTo').value = ''; loadBranches();
 });
 
 /* ---------- campaign & branding ---------- */
@@ -442,7 +565,7 @@ async function loadCamp(){
   $('bName').value = c.brand_name || '@less fashion'; $('bColor').value = c.color || '#741233'; $('bAccent').value = c.accent || '#e2ad37'; $('bTerms').value = c.terms || '';
   $('logoPrev').src = c.logo || ''; $('logoPrev').hidden = !c.logo; $('logoFile').value = '';
   $('cName').value = c.name; $('cMin').value = c.min_bill; $('cVal').value = c.validity_days; $('cStart').value = c.start_date || ''; $('cEnd').value = c.end_date || '';
-  $('cOnce').value = c.once_per_day ? '1' : '0'; $('cActive').value = c.active ? '1' : '0'; $('campMsg').textContent = '';
+  $('cSecond').value = c.second_card_min ?? ''; $('cOnce').value = c.once_per_day ? '1' : '0'; $('cActive').value = c.active ? '1' : '0'; $('campMsg').textContent = '';
 }
 $('logoFile').addEventListener('change', async () => {
   const f = $('logoFile').files[0]; if (!f) return;
@@ -454,7 +577,7 @@ $('campForm').addEventListener('submit', async e => {
   e.preventDefault();
   const row = {brand_name: $('bName').value.trim() || '@less fashion', color: $('bColor').value, accent: $('bAccent').value, terms: $('bTerms').value.trim(),
     name: $('cName').value.trim() || 'Scratch & Win', min_bill: Math.max(0, Number($('cMin').value) || 0), validity_days: Math.max(1, Number($('cVal').value) || 30),
-    start_date: $('cStart').value || null, end_date: $('cEnd').value || null, once_per_day: $('cOnce').value === '1', active: $('cActive').value === '1'};
+    start_date: $('cStart').value || null, end_date: $('cEnd').value || null, once_per_day: $('cOnce').value === '1', active: $('cActive').value === '1', second_card_min: $('cSecond').value === '' ? null : Math.max(0, Number($('cSecond').value) || 0)};
   if (newLogo !== undefined) row.logo = newLogo;
   const {error} = await sb.from('campaign').update(row).eq('id', 1);
   $('campMsg').className = error ? 'err' : 'okmsg';
@@ -473,9 +596,36 @@ async function loadLog(){
   if (error) { $('logTable').innerHTML = `<tr><td class="err">${esc(errText(error))}</td></tr>`; return; }
   const t = today();
   $('logTable').innerHTML = `<thead><tr><th>Date</th><th>Branch</th><th>Bill</th><th class="n">Amount</th><th>Customer</th><th>Prize</th><th>Code</th><th>Status</th></tr></thead><tbody>` +
-    (data.length ? data.map(s => `<tr><td>${fmtD(s.day)}</td><td>${esc(brName(s.branch_id))}</td><td>${esc(s.bill_no)}</td><td class="n">${rupee(s.amount)}</td><td>${esc(s.customer_name)} · ${esc(s.mobile)}</td><td>${esc(s.prize_name)}</td><td>${esc(s.code)}</td><td>${s.status === 'used' ? '<span class="pill ok">Used</span>' : s.expires_on < t ? '<span class="pill bad">Expired</span>' : '<span class="pill">New</span>'}</td></tr>`).join('')
+    (data.length ? data.map(s => `<tr><td>${fmtD(s.day)}</td><td>${esc(brName(s.branch_id))}</td><td>${esc(s.bill_no)}</td><td class="n">${rupee(s.amount)}</td><td>${s.customer_name ? esc(s.customer_name) + ' · ' : ''}${esc(s.mobile)}</td><td>${esc(s.prize_name)}${s.card_no === 2 ? ' <span class="pill g">2nd card</span>' : ''}</td><td>${esc(s.code)}</td><td>${s.status === 'used' ? '<span class="pill ok">Used</span>' : s.expires_on < t ? '<span class="pill bad">Expired</span>' : '<span class="pill">New</span>'}</td></tr>`).join('')
     : '<tr><td colspan="8">Nothing found.</td></tr>') + '</tbody>';
 }
+
+/* ---------- users ---------- */
+$('usRole').innerHTML = Object.entries(ROLES).map(([k, v]) => `<option value="${k}"${k === 'sales' ? ' selected' : ''}>${v}</option>`).join('');
+async function loadUsers(){
+  const {data, error} = await sb.from('app_users').select('*').order('role').order('email');
+  if (error) { $('usTable').innerHTML = `<tr><td class="err">${esc(errText(error))}</td></tr>`; return; }
+  $('usTable').innerHTML = `<thead><tr><th>Email</th><th>Name</th><th>Role</th><th>Active</th><th></th></tr></thead><tbody>` +
+    data.map((u, i) => `<tr><td>${esc(u.email)}</td><td><input id="un${i}" value="${esc(u.name || '')}" aria-label="Name"></td>
+      <td><select id="ur${i}" aria-label="Role">${Object.entries(ROLES).map(([k, v]) => `<option value="${k}"${k === u.role ? ' selected' : ''}>${v}</option>`).join('')}</select></td>
+      <td><select id="ua${i}" aria-label="Active"><option value="1"${u.active ? ' selected' : ''}>Yes</option><option value="0"${u.active ? '' : ' selected'}>No</option></select></td>
+      <td><button class="btn sm" type="button" data-us="${i}" data-email="${esc(u.email)}">Save</button> <span class="note" id="um${i}"></span></td></tr>`).join('') + '</tbody>';
+}
+$('usTable').addEventListener('click', async e => {
+  const i = e.target.dataset.us; if (i == null) return;
+  const email = e.target.dataset.email, me = (await sb.auth.getUser()).data.user?.email;
+  if (email === (me || '').toLowerCase() && ($('ur' + i).value !== 'admin' || $('ua' + i).value !== '1')) { $('um' + i).textContent = 'You cannot remove your own admin access.'; return; }
+  const {error} = await sb.from('app_users').update({name: $('un' + i).value.trim(), role: $('ur' + i).value, active: $('ua' + i).value === '1'}).eq('email', email);
+  $('um' + i).textContent = error ? errText(error) : 'Saved';
+});
+$('usForm').addEventListener('submit', async e => {
+  e.preventDefault(); $('usErr').textContent = '';
+  const email = $('usEmail').value.trim().toLowerCase();
+  if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) { $('usErr').textContent = 'Enter a valid email.'; return; }
+  const {error} = await sb.from('app_users').insert({email, name: $('usName').value.trim() || null, role: $('usRole').value});
+  if (error) { $('usErr').textContent = /duplicate/i.test(error.message) ? 'This email is already added.' : errText(error); return; }
+  $('usEmail').value = ''; $('usName').value = ''; loadUsers();
+});
 
 boot();
 }
