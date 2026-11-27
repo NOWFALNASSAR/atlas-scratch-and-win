@@ -57,7 +57,7 @@
   </form>
   <div id="play" hidden>
     <p class="hi" id="hi"></p>
-    <div class="sc"><div class="face" id="face"><div><div class="big" id="pName"></div><div class="t" id="pType"></div></div></div><canvas id="cv"></canvas></div>
+    <div class="sc"><div class="face" id="face" style="visibility:hidden"><div><div class="big" id="pName"></div><div class="t" id="pType"></div></div></div><canvas id="cv"></canvas></div>
     <div class="flex" style="justify-content:center;margin-top:10px"><button class="btn ghost sm" id="revealAll" type="button">Reveal all</button></div>
     <div class="res" id="res" hidden>
       <div class="flex between"><span class="pill g" id="rType"></span><span class="note" id="rExp"></span></div>
@@ -217,17 +217,35 @@ $('entry').addEventListener('submit', async e => {
   if (error) return err(errText(error));
   startCard(data);
 });
-function startCard(data){
-  cur = data;
-  const p = (sess.prizes || []).find(x => x.id === cur.prize_id);
+function hideFace(){   // nothing about the prize is on the card until the gold cover is fully on top
   const face = $('face');
-  face.style.visibility = 'hidden';   // never show the prize before the gold cover is drawn
-  face.className = 'face photo'; face.style.backgroundImage = `url("${picFor(p || {id: cur.prize_id, name: cur.prize})}")`;
+  face.style.visibility = 'hidden'; face.style.backgroundImage = 'none'; face.className = 'face';
+  $('pName').textContent = ''; $('pType').textContent = '';
+}
+function coverReady(){ const d = ctx.getImageData(0, 0, cv.width, cv.height).data; for (let i = 3; i < d.length; i += 400) if (d[i] < 250) return false; return cv.width > 0 && cv.height > 0; }
+let cardSeq = 0;
+function startCard(data){
+  cur = data; const seq = ++cardSeq; revealed = false; scratched = false; drawing = false;
+  hideFace();
+  cv.style.transition = 'none'; cv.style.opacity = '1';   // no fade-in: cover is solid at once
   $('entry').hidden = true; $('play').hidden = false; $('res').hidden = true; $('giveErr').textContent = '';
   $('hi').textContent = cur.card_no === 2 ? '2nd scratch card – scratch the gold card with your finger!' : 'Scratch the gold card with your finger!';
-  $('pName').textContent = cur.prize; $('pType').textContent = TYPES[cur.type] || '';
   window.scrollTo({top: 0, behavior: 'smooth'});
-  requestAnimationFrame(() => { paintFoil(); face.style.visibility = 'visible'; Xmas.santa(cur.card_no === 2 ? 'Ho ho ho! One more gift from Pappaji!' : 'Ho ho ho! Pappaji brought your gift!'); });
+  const p = (sess.prizes || []).find(x => x.id === cur.prize_id);
+  const putPrize = () => {
+    if (seq !== cardSeq || revealed) return;
+    paintFoil();
+    if (!coverReady()) return requestAnimationFrame(putPrize);   // layout not ready yet: try next frame, prize stays hidden
+    requestAnimationFrame(() => requestAnimationFrame(() => {     // cover is on screen now; only then put the prize under it
+      if (seq !== cardSeq) return;
+      const face = $('face');
+      face.className = 'face photo'; face.style.backgroundImage = `url("${picFor(p || {id: cur.prize_id, name: cur.prize})}")`;
+      $('pName').textContent = cur.prize; $('pType').textContent = TYPES[cur.type] || '';
+      face.style.visibility = 'visible';
+    }));
+    Xmas.santa(cur.card_no === 2 ? 'Ho ho ho! One more gift from Pappaji!' : 'Ho ho ho! Pappaji brought your gift!');
+  };
+  requestAnimationFrame(putPrize);
 }
 $('secGo').addEventListener('click', async () => {
   if ($('secPin').value.trim() !== sess.pin) { $('secErr').textContent = 'Wrong PIN. Only the branch manager can give a 2nd card.'; return; }
@@ -287,7 +305,7 @@ cv.addEventListener('pointermove', e => { if (drawing && !revealed) scratchAt(e)
 ['pointerup','pointercancel'].forEach(t => cv.addEventListener(t, () => { drawing = false; if (!revealed && cleared() > .35) reveal(); }));
 $('revealAll').addEventListener('click', reveal);
 function reveal(){
-  if (revealed || !cur) return; revealed = true; cv.style.opacity = 0; winPop(); setTimeout(() => ctx.clearRect(0, 0, cv.width, cv.height), 650); confetti();
+  if (revealed || !cur) return; revealed = true; cv.style.transition = ''; cv.style.opacity = 0; winPop(); setTimeout(() => ctx.clearRect(0, 0, cv.width, cv.height), 650); confetti();
   $('rType').textContent = TYPES[cur.type] || ''; $('rCode').textContent = cur.code; $('rExp').textContent = `Valid till ${fmtD(cur.expires_on)}`;
   const how = cur.type === 'voucher' ? 'Show this code on your next purchase.' : (cur.redeemed ? 'Your gift has been handed over to you at the counter.' : 'Show this code at the shop counter to collect your gift.');
   const msg = `Hi,\nCongratulations! You won ${cur.prize} in the ${brand} ${cur.campaign} Scratch & Win!\nCoupon code: ${cur.code}\n${how}\nValid till ${fmtD(cur.expires_on)}.\nThank you, visit again! – ${brand}, ${cur.branch}`;
@@ -328,7 +346,7 @@ $('giveNow').addEventListener('click', async () => {
   if (error) { $('giveErr').textContent = errText(error); b.disabled = false; return; }
   b.textContent = 'Gift given ✓';
 });
-$('next').addEventListener('click', () => { cur = null; ['fBill','fAmt','fMob'].forEach(i => $(i).value = ''); $('play').hidden = true; $('entry').hidden = false; $('fBill').focus(); });
+$('next').addEventListener('click', () => { cur = null; ['fBill','fAmt','fMob'].forEach(i => $(i).value = ''); $('play').hidden = true; hideFace(); $('entry').hidden = false; $('fBill').focus(); });
 // only redraw the cover if the card really changed size and nobody has started scratching
 addEventListener('resize', () => { if ($('play').hidden || revealed || scratched) return; if (Math.round(cv.getBoundingClientRect().width) !== foilW) paintFoil(); });
 
