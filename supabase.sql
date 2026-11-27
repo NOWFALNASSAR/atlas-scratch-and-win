@@ -1,5 +1,5 @@
 -- =====================================================================
--- @less fashion Scratch & Win  -  Supabase database (version 11: no duplicate prize names)
+-- @less fashion Scratch & Win  -  Supabase database (version 12: gift distribution report)
 -- Supabase > SQL Editor > New query > paste this whole file > Run
 -- Safe to run on a new project AND on top of any earlier version (keeps all data).
 -- =====================================================================
@@ -783,6 +783,36 @@ begin
   return json_build_object('ok', true);
 end $$;
 
+-- v12: gift distribution report – gift-wise, branch-wise and day-wise counts
+create or replace function public.gift_report(p_from date, p_to date, p_branch bigint default null)
+returns json language sql stable security invoker set search_path = public as $$
+  with s as (
+    select sc.*, b.name as branch_name
+    from public.scratches sc join public.branches b on b.id = sc.branch_id
+    where sc.day between p_from and p_to and (p_branch is null or sc.branch_id = p_branch)
+  )
+  select json_build_object(
+    'date_from', p_from, 'date_to', p_to, 'made_at', now(),
+    'branch', (select name from public.branches where id = p_branch),
+    'gifts', (select coalesce(json_agg(x order by x.sort nulls last, x.name), '[]'::json) from (
+        select s.prize_name as name, max(s.prize_type) as type, min(p.sort) as sort,
+               count(*) as won,
+               count(*) filter (where s.status = 'used') as given,
+               count(*) filter (where s.status = 'new' and s.expires_on >= public._today()) as pending,
+               count(*) filter (where s.status = 'new' and s.expires_on <  public._today()) as expired,
+               max(i.price) as price
+        from s left join public.prizes p on p.id = s.prize_id left join public.items i on i.id = s.item_id
+        group by s.prize_name) x),
+    'by_branch', (select coalesce(json_agg(x), '[]'::json) from (
+        select branch_name as branch, prize_name as name, count(*) as won, count(*) filter (where status = 'used') as given
+        from s group by branch_name, prize_name) x),
+    'by_day', (select coalesce(json_agg(x), '[]'::json) from (
+        select day, prize_name as name, count(*) as won, count(*) filter (where status = 'used') as given
+        from s group by day, prize_name) x),
+    'total', (select count(*) from s)
+  )
+$$;
+
 -- v11: no duplicate prize / gift names (ignores upper/lower case). Skipped if duplicates still exist – run december-2026-plan.sql to merge them.
 do $$ begin
   begin create unique index if not exists prizes_name_ci_uq on public.prizes (lower(trim(name))); exception when unique_violation then raise notice 'duplicate prize names exist'; end;
@@ -803,7 +833,7 @@ do $$ declare f text; begin
     execute 'grant execute on function public.' || f || ' to anon, authenticated';
   end loop;
   foreach f in array array['admin_save_branch(bigint,text,text,boolean,numeric,numeric)','admin_stats(date,date)','admin_stock_in(bigint,bigint,numeric,text)',
-                           'admin_transfer(bigint,bigint,bigint,numeric,text)','admin_purchase(bigint,jsonb,text)','admin_transfer_batch(bigint,jsonb,text)','admin_stock_summary()','admin_closing(bigint,date)','my_role()','inventory_report(date,date)','submit_inventory_report(date,date,text)','admin_create_user(text,text,text,text)','admin_set_password(text,text)'] loop
+                           'admin_transfer(bigint,bigint,bigint,numeric,text)','admin_purchase(bigint,jsonb,text)','admin_transfer_batch(bigint,jsonb,text)','admin_stock_summary()','admin_closing(bigint,date)','my_role()','gift_report(date,date,bigint)','inventory_report(date,date)','submit_inventory_report(date,date,text)','admin_create_user(text,text,text,text)','admin_set_password(text,text)'] loop
     execute 'revoke all on function public.' || f || ' from public, anon';
     execute 'grant execute on function public.' || f || ' to authenticated';
   end loop;

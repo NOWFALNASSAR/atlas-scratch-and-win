@@ -25,6 +25,7 @@
     <button role="tab" data-v="branches">Branches</button>
     <button role="tab" data-v="camp">Campaign &amp; branding</button>
     <button role="tab" data-v="log">Scratch log</button>
+    <button role="tab" data-v="gifts">Gift report</button>
     <button role="tab" data-v="reports">Reports</button>
     <button role="tab" data-v="users">Users</button>
     <button role="tab" data-v="me" hidden>My password</button>
@@ -189,6 +190,22 @@
   <table class="stack" id="logTable"></table>
 </section>
 
+<!-- Gift report -->
+<section id="v-gifts" hidden>
+  <div class="flex between" style="margin-bottom:12px">
+    <h2 style="margin:0">Gift distribution report</h2>
+    <div class="flex">
+      <input id="grFrom" type="date" style="width:auto" aria-label="From">
+      <input id="grTo" type="date" style="width:auto" aria-label="To">
+      <select id="grBr" style="width:auto" aria-label="Branch"></select>
+      <select id="grCount" style="width:auto" aria-label="Count"><option value="won">Count: won by customers</option><option value="given">Count: given / redeemed</option></select>
+      <button class="btn sm" id="grGo" type="button">Show</button>
+    </div>
+  </div>
+  <div class="flex" style="margin-bottom:12px"><button class="btn dark sm" id="grPrint" type="button">Print (A4)</button><button class="btn ghost sm" id="grCsv" type="button">Download Excel (CSV)</button></div>
+  <div id="grOut"><p class="note">Choose dates and press Show.</p></div>
+</section>
+
 <!-- Reports -->
 <section id="v-reports" hidden>
   <h2>Inventory reports</h2>
@@ -264,9 +281,9 @@ const locName = id => id == null || id === '' ? 'Head Office' : ((branches.find(
 const brName = id => (branches.find(b => b.id === id) || {}).name || '';
 
 function view(v){
-  ['login','dash','stock','closings','prizes','branches','camp','log','reports','me','users','norole','config'].forEach(x => { $('v-'+x).hidden = x !== v; });
+  ['login','dash','stock','closings','prizes','branches','camp','log','gifts','reports','me','users','norole','config'].forEach(x => { $('v-'+x).hidden = x !== v; });
   document.querySelectorAll('#tabs button').forEach(b => b.setAttribute('aria-selected', b.dataset.v === v));
-  ({dash:loadDash, stock:loadStock, closings:loadClosings, prizes:loadPrizes, branches:loadBranches, camp:loadCamp, log:loadLog, users:loadUsers, reports:loadReports})[v]?.();
+  ({dash:loadDash, stock:loadStock, closings:loadClosings, prizes:loadPrizes, branches:loadBranches, camp:loadCamp, log:loadLog, users:loadUsers, reports:loadReports, gifts:loadGiftReport})[v]?.();
 }
 document.querySelectorAll('#tabs button').forEach(b => b.addEventListener('click', () => view(b.dataset.v)));
 
@@ -288,11 +305,11 @@ $('nrLogout').addEventListener('click', async () => { await sb.auth.signOut(); b
 /* ---------- roles: what each person can see and change ---------- */
 const ROLES = {admin: 'Admin', marketing: 'Marketing', inventory: 'Inventory', sales: 'Sales Manager', accounts: 'Accounts Manager'};
 const ROLE_TABS = {
-  admin:     ['dash','stock','closings','prizes','branches','camp','log','reports','users'],
-  marketing: ['dash','stock','prizes','camp','log'],
-  inventory: ['stock','closings','reports','log'],
-  sales:     ['dash','stock','closings','prizes','reports','log'],
-  accounts:  ['dash','stock','closings','reports','log']
+  admin:     ['dash','stock','closings','prizes','branches','camp','log','gifts','reports','users'],
+  marketing: ['dash','stock','prizes','camp','log','gifts'],
+  inventory: ['stock','closings','gifts','reports','log'],
+  sales:     ['dash','stock','closings','prizes','gifts','reports','log'],
+  accounts:  ['dash','stock','closings','gifts','reports','log']
 };
 let role = null;
 const canEdit = area => role === 'admin' || (role === 'marketing' && (area === 'prizes' || area === 'camp')) || (role === 'inventory' && (area === 'stock' || area === 'reports'));
@@ -754,6 +771,65 @@ $('meForm').addEventListener('submit', async e => {
   const {error} = await sb.auth.updateUser({password: $('meNew').value});
   if (error) { m.textContent = 'Could not change password: ' + error.message; return; }
   m.className = 'okmsg'; m.textContent = 'Password changed. Use the new password next time you log in.'; $('meNew').value = ''; $('meNew2').value = '';
+});
+
+/* ---------- gift distribution report ---------- */
+$('grTo').value = today(); $('grFrom').value = today().slice(0, 8) + '01';
+let grData = null;
+$('grGo').addEventListener('click', loadGiftReport);
+$('grCount').addEventListener('change', () => { if (grData) $('grOut').innerHTML = giftReportHtml(grData); });
+async function loadGiftReport(){
+  await loadBranchList();
+  const keep = $('grBr').value;
+  $('grBr').innerHTML = '<option value="">All branches</option>' + branches.map(b => `<option value="${b.id}">${esc(b.name)}</option>`).join('');
+  $('grBr').value = keep;
+  $('grOut').innerHTML = '<p class="note">Loading…</p>';
+  const {data, error} = await sb.rpc('gift_report', {p_from: $('grFrom').value, p_to: $('grTo').value, p_branch: $('grBr').value ? Number($('grBr').value) : null});
+  if (error) { $('grOut').innerHTML = `<p class="err">${esc(errText(error))}</p>`; return; }
+  grData = data; $('grOut').innerHTML = giftReportHtml(data);
+}
+function grDays(d){ const out = []; for (let t = new Date(d.date_from + 'T00:00:00'); t <= new Date(d.date_to + 'T00:00:00'); t.setDate(t.getDate() + 1)) out.push(t.toLocaleDateString('en-CA')); return out; }
+function giftReportHtml(d){
+  const k = $('grCount').value, gifts = d.gifts || [], names = gifts.map(g => g.name);
+  const cell = (rows, a, av, name) => { const r = rows.find(x => x[a] === av && x.name === name); return r ? Number(r[k]) : 0; };
+  const sum = (arr, f) => arr.reduce((s, x) => s + f(x), 0);
+  const brs = [...new Set((d.by_branch || []).map(r => r.branch))].sort();
+  const days = grDays(d).filter(x => true);
+  const value = sum(gifts, g => Number(g.won) * Number(g.price || 0));
+  const label = k === 'won' ? 'won by customers' : 'given / redeemed';
+  return `<div class="rep">
+    <p class="note">${fmtD(d.date_from)} to ${fmtD(d.date_to)} · ${d.branch ? esc(d.branch) : 'All branches'} · made ${fmtDT(d.made_at)}</p>
+    <div class="kpis">${[[num(d.total), 'Scratch cards'], [num(sum(gifts, g => Number(g.given))), 'Given / redeemed'], [num(sum(gifts, g => Number(g.pending))), 'Waiting to collect'], [rupee(value), 'Gift value won (stock gifts)']]
+      .map(([v, l]) => `<div class="kpi"><div class="big">${v}</div><span>${l}</span></div>`).join('')}</div>
+    <h3>1. Gift-wise</h3>
+    <div class="scroll"><table><thead><tr><th>Gift</th><th class="n">Won</th><th class="n">Given / redeemed</th><th class="n">Waiting</th><th class="n">Expired</th><th class="n">Price</th><th class="n">Value (won)</th></tr></thead><tbody>
+      ${gifts.map(g => `<tr><td>${esc(g.name)}</td><td class="n b">${num(g.won)}</td><td class="n">${num(g.given)}</td><td class="n">${num(g.pending)}</td><td class="n">${num(g.expired)}</td><td class="n">${g.price != null ? rupee(g.price) : '–'}</td><td class="n">${g.price != null ? rupee(Number(g.won) * Number(g.price)) : '–'}</td></tr>`).join('') || '<tr><td colspan="7">No scratch cards in these dates.</td></tr>'}
+      ${gifts.length ? `<tr><td class="b">Total</td><td class="n b">${num(sum(gifts, g => Number(g.won)))}</td><td class="n b">${num(sum(gifts, g => Number(g.given)))}</td><td class="n b">${num(sum(gifts, g => Number(g.pending)))}</td><td class="n b">${num(sum(gifts, g => Number(g.expired)))}</td><td></td><td class="n b">${rupee(value)}</td></tr>` : ''}
+    </tbody></table></div>
+    <h3 style="margin-top:22px">2. Branch-wise (${label})</h3>
+    <div class="scroll"><table class="sticky1"><thead><tr><th>Gift</th>${brs.map(b => `<th class="n">${esc(b)}</th>`).join('')}<th class="n">Total</th></tr></thead><tbody>
+      ${names.map(n => `<tr><td>${esc(n)}</td>${brs.map(b => `<td class="n">${num(cell(d.by_branch, 'branch', b, n)) || ''}</td>`).join('')}<td class="n b">${num(sum(brs, b => cell(d.by_branch, 'branch', b, n)))}</td></tr>`).join('')}
+      <tr><td class="b">Total</td>${brs.map(b => `<td class="n b">${num(sum(names, n => cell(d.by_branch, 'branch', b, n)))}</td>`).join('')}<td class="n b">${num(sum((d.by_branch || []), r => Number(r[k])))}</td></tr>
+    </tbody></table></div>
+    <h3 style="margin-top:22px">3. Day-wise (${label})</h3>
+    <div class="scroll"><table class="sticky1"><thead><tr><th>Date</th>${names.map(n => `<th class="n">${esc(n)}</th>`).join('')}<th class="n">Total</th></tr></thead><tbody>
+      ${days.map(dy => { const t = sum(names, n => cell(d.by_day, 'day', dy, n)); return `<tr><td>${fmtD(dy)}</td>${names.map(n => `<td class="n">${num(cell(d.by_day, 'day', dy, n)) || ''}</td>`).join('')}<td class="n b">${t ? num(t) : ''}</td></tr>`; }).join('')}
+      <tr><td class="b">Total</td>${names.map(n => `<td class="n b">${num(sum(days, dy => cell(d.by_day, 'day', dy, n)))}</td>`).join('')}<td class="n b">${num(sum((d.by_day || []), r => Number(r[k])))}</td></tr>
+    </tbody></table></div></div>`;
+}
+$('grPrint').addEventListener('click', () => { if (!grData) return; printSlip(`${camp.logo ? `<img src="${camp.logo}" alt="">` : ''}<h1>${esc(brand)} – Gift distribution report</h1>` + giftReportHtml(grData), true); });
+$('grCsv').addEventListener('click', () => {
+  if (!grData) return; const d = grData, k = $('grCount').value, q = v => '"' + String(v ?? '').replace(/"/g, '""') + '"';
+  const gifts = d.gifts || [], names = gifts.map(g => g.name), brs = [...new Set((d.by_branch || []).map(r => r.branch))].sort(), days = grDays(d);
+  const cell = (rows, a, av, name) => { const r = rows.find(x => x[a] === av && x.name === name); return r ? Number(r[k]) : 0; };
+  const L = [[`Gift distribution report ${d.date_from} to ${d.date_to}`, d.branch || 'All branches'], [], ['GIFT-WISE'], ['Gift', 'Won', 'Given', 'Waiting', 'Expired', 'Price', 'Value (won)']];
+  gifts.forEach(g => L.push([g.name, g.won, g.given, g.pending, g.expired, g.price ?? '', g.price != null ? Number(g.won) * Number(g.price) : '']));
+  L.push([], [`BRANCH-WISE (${k})`], ['Gift'].concat(brs, ['Total']));
+  names.forEach(n => { const row = brs.map(b => cell(d.by_branch, 'branch', b, n)); L.push([n].concat(row, [row.reduce((a, b) => a + b, 0)])); });
+  L.push([], [`DAY-WISE (${k})`], ['Date'].concat(names, ['Total']));
+  days.forEach(dy => { const row = names.map(n => cell(d.by_day, 'day', dy, n)); L.push([dy].concat(row, [row.reduce((a, b) => a + b, 0)])); });
+  const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob(['﻿' + L.map(r => r.map(q).join(',')).join('\r\n')], {type: 'text/csv;charset=utf-8'}));
+  a.download = `gift-report_${d.date_from}_to_${d.date_to}.csv`; document.body.appendChild(a); a.click(); a.remove();
 });
 
 /* ---------- inventory reports ---------- */
