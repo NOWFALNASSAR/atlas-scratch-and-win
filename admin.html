@@ -169,6 +169,7 @@
       <div><label for="cEnd">End date</label><input id="cEnd" type="date"></div>
       <div><label for="cOnce">One scratch per mobile per day</label><select id="cOnce"><option value="1">Yes</option><option value="0">No</option></select></div>
       <div><label for="cSecond">2nd scratch card for bills from ₹ (empty = off)</label><input id="cSecond" type="number" min="0" placeholder="e.g. 5000"></div>
+      <div><label for="cInstant">Redeem</label><select id="cInstant"><option value="1">At scratch time (slip + gift given at once)</option><option value="0">Later (customer brings coupon back)</option></select></div>
       <div><label for="cTheme">Tablet theme</label><select id="cTheme"><option value="normal">Normal</option><option value="xmas">Christmas (Pappaji, snow, lights)</option></select></div>
       <div><label for="cActive">Offer on / off</label><select id="cActive"><option value="1">On</option><option value="0">Off</option></select></div>
     </div>
@@ -696,7 +697,7 @@ async function loadCamp(){
   $('bName').value = c.brand_name || '@less fashion'; $('bColor').value = c.color || '#741233'; $('bAccent').value = c.accent || '#e2ad37'; $('bTerms').value = c.terms || '';
   $('logoPrev').src = c.logo || ''; $('logoPrev').hidden = !c.logo; $('logoFile').value = '';
   $('cName').value = c.name; $('cMin').value = c.min_bill; $('cVal').value = c.validity_days; $('cStart').value = c.start_date || ''; $('cEnd').value = c.end_date || '';
-  $('cSecond').value = c.second_card_min ?? ''; $('cTheme').value = c.theme || 'normal'; $('cOnce').value = c.once_per_day ? '1' : '0'; $('cActive').value = c.active ? '1' : '0'; $('campMsg').textContent = '';
+  $('cSecond').value = c.second_card_min ?? ''; $('cTheme').value = c.theme || 'normal'; $('cInstant').value = c.instant_redeem === false ? '0' : '1'; $('cOnce').value = c.once_per_day ? '1' : '0'; $('cActive').value = c.active ? '1' : '0'; $('campMsg').textContent = '';
 }
 $('logoFile').addEventListener('change', async () => {
   const f = $('logoFile').files[0]; if (!f) return;
@@ -708,7 +709,7 @@ $('campForm').addEventListener('submit', async e => {
   e.preventDefault();
   const row = {brand_name: $('bName').value.trim() || '@less fashion', color: $('bColor').value, accent: $('bAccent').value, terms: $('bTerms').value.trim(),
     name: $('cName').value.trim() || 'Scratch & Win', min_bill: Math.max(0, Number($('cMin').value) || 0), validity_days: Math.max(1, Number($('cVal').value) || 30),
-    start_date: $('cStart').value || null, end_date: $('cEnd').value || null, once_per_day: $('cOnce').value === '1', active: $('cActive').value === '1', second_card_min: $('cSecond').value === '' ? null : Math.max(0, Number($('cSecond').value) || 0), theme: $('cTheme').value};
+    start_date: $('cStart').value || null, end_date: $('cEnd').value || null, once_per_day: $('cOnce').value === '1', active: $('cActive').value === '1', second_card_min: $('cSecond').value === '' ? null : Math.max(0, Number($('cSecond').value) || 0), theme: $('cTheme').value, instant_redeem: $('cInstant').value === '1'};
   if (newLogo !== undefined) row.logo = newLogo;
   const {error} = await sb.from('campaign').update(row).eq('id', 1);
   $('campMsg').className = error ? 'err' : 'okmsg';

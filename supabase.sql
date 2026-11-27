@@ -1,5 +1,5 @@
 -- =====================================================================
--- @less fashion Scratch & Win  -  Supabase database (version 12: gift distribution report)
+-- @less fashion Scratch & Win  -  Supabase database (version 13: redeemed at scratch time)
 -- Supabase > SQL Editor > New query > paste this whole file > Run
 -- Safe to run on a new project AND on top of any earlier version (keeps all data).
 -- =====================================================================
@@ -39,7 +39,8 @@ alter table public.campaign add column if not exists brand_name text not null de
 alter table public.campaign add column if not exists logo       text;
 alter table public.campaign add column if not exists color      text not null default '#741233';
 alter table public.campaign add column if not exists accent     text not null default '#e2ad37';
-alter table public.campaign add column if not exists theme text not null default 'normal';   -- v8: 'normal' or 'xmas'
+alter table public.campaign add column if not exists theme text not null default 'normal';
+alter table public.campaign add column if not exists instant_redeem boolean not null default true;   -- v13: mark as redeemed (and take gift from stock) at scratch time   -- v8: 'normal' or 'xmas'
 alter table public.campaign add column if not exists second_card_min numeric;   -- v5: bills at/above this amount can get a 2nd card (empty = off)
 alter table public.campaign add column if not exists terms      text not null default 'Valid at all @less fashion showrooms. Not exchangeable for cash.';
 
@@ -254,7 +255,7 @@ $$;
 create or replace function public._settings_json()
 returns json language sql stable security definer set search_path = public as $$
   select json_build_object('campaign', c.name, 'min_bill', c.min_bill, 'brand_name', c.brand_name,
-    'logo', c.logo, 'color', c.color, 'accent', c.accent, 'terms', c.terms, 'validity_days', c.validity_days, 'second_card_min', c.second_card_min, 'theme', c.theme)
+    'logo', c.logo, 'color', c.color, 'accent', c.accent, 'terms', c.terms, 'validity_days', c.validity_days, 'second_card_min', c.second_card_min, 'theme', c.theme, 'instant_redeem', c.instant_redeem)
   from public.campaign c where id = 1
 $$;
 
@@ -291,7 +292,7 @@ declare
   v_branch bigint; b public.branches; c public.campaign; v_day date := public._today();
   v_total numeric; v_r numeric; v_pid bigint; v_last bigint; v_ids bigint[]; v_ws numeric[];
   v_slab bigint; v_has_slabs boolean; v_num numeric; v_first public.scratches;
-  v_prize public.prizes; v_code text; v_exp date;
+  v_prize public.prizes; v_code text; v_exp date; v_sid bigint;
 begin
   v_branch := public._branch_by_pin(p_pin);
   if v_branch is null then raise exception 'BRANCH_PIN'; end if;
@@ -387,13 +388,23 @@ begin
   v_exp := v_day + c.validity_days;
 
   insert into public.scratches (branch_id, bill_no, amount, customer_name, mobile, prize_id, prize_name, prize_type, item_id, code, expires_on, card_no)
-  values (v_branch, p_bill, p_amount, coalesce(trim(p_name),''), p_mobile, v_prize.id, v_prize.name, v_prize.type, v_prize.item_id, v_code, v_exp, p_card);
+  values (v_branch, p_bill, p_amount, coalesce(trim(p_name),''), p_mobile, v_prize.id, v_prize.name, v_prize.type, v_prize.item_id, v_code, v_exp, p_card)
+  returning id into v_sid;
+
+  -- v13: given at the counter right away – mark as redeemed and take the gift out of this branch's stock
+  if c.instant_redeem then
+    update public.scratches set status = 'used', used_at = now(), used_branch_id = v_branch where id = v_sid;
+    if v_prize.item_id is not null then
+      insert into public.stock_moves (item_id, branch_id, qty, kind, ref, note, price)
+      values (v_prize.item_id, v_branch, -1, 'issue', v_code, v_prize.name || ' to ' || p_mobile, (select price from public.items where id = v_prize.item_id));
+    end if;
+  end if;
 
   return json_build_object('prize_id', v_prize.id, 'prize', v_prize.name, 'type', v_prize.type,
                            'has_item', v_prize.item_id is not null, 'code', v_code,
                            'expires_on', v_exp, 'branch', b.name, 'campaign', c.name,
                            'name', '', 'mobile', p_mobile, 'bill', p_bill, 'amount', p_amount,
-                           'card_no', p_card,
+                           'card_no', p_card, 'redeemed', c.instant_redeem,
                            'second_allowed', p_card = 1 and c.second_card_min is not null and p_amount >= c.second_card_min,
                            'at', now());
 end $$;

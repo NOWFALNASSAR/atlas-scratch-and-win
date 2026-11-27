@@ -61,6 +61,7 @@
     <div class="flex" style="justify-content:center;margin-top:10px"><button class="btn ghost sm" id="revealAll" type="button">Reveal all</button></div>
     <div class="res" id="res" hidden>
       <div class="flex between"><span class="pill g" id="rType"></span><span class="note" id="rExp"></span></div>
+      <p class="okmsg" id="rDone" hidden style="font-size:17px;margin:10px 0 0">✓ Marked as redeemed. Print the slip and give the gift with it.</p>
       <p style="margin:10px 0 2px">Coupon code</p><div class="code" id="rCode"></div>
       <div class="msg" id="rMsg"></div>
       <div class="flex">
@@ -179,6 +180,8 @@ function paintHeader(){
   document.title = `${brand} – Scratch & Win`;
   loadLogo();
   if (sess.theme === 'xmas') Xmas.enable(); else Xmas.disable();
+  const instant = sess.instant_redeem !== false;
+  document.querySelector('#tabs [data-v=redeem]').hidden = instant;
 }
 function boot(){
   if (!configured) { view('config'); return; }
@@ -286,14 +289,15 @@ $('revealAll').addEventListener('click', reveal);
 function reveal(){
   if (revealed || !cur) return; revealed = true; cv.style.opacity = 0; winPop(); setTimeout(() => ctx.clearRect(0, 0, cv.width, cv.height), 650); confetti();
   $('rType').textContent = TYPES[cur.type] || ''; $('rCode').textContent = cur.code; $('rExp').textContent = `Valid till ${fmtD(cur.expires_on)}`;
-  const how = cur.type === 'voucher' ? 'Show this code on your next purchase.' : 'Show this code at the shop counter to collect your gift.';
+  const how = cur.type === 'voucher' ? 'Show this code on your next purchase.' : (cur.redeemed ? 'Your gift has been handed over to you at the counter.' : 'Show this code at the shop counter to collect your gift.');
   const msg = `Hi,\nCongratulations! You won ${cur.prize} in the ${brand} ${cur.campaign} Scratch & Win!\nCoupon code: ${cur.code}\n${how}\nValid till ${fmtD(cur.expires_on)}.\nThank you, visit again! – ${brand}, ${cur.branch}`;
   $('rMsg').textContent = msg;
   $('waBtn').href = `https://wa.me/91${cur.mobile}?text=${encodeURIComponent(msg)}`;
-  $('giveNow').hidden = !cur.has_item; $('giveNow').disabled = false; $('giveNow').textContent = 'Give gift now';
+  $('giveNow').hidden = cur.redeemed || !cur.has_item; $('giveNow').disabled = false; $('giveNow').textContent = 'Give gift now';
+  $('rDone').hidden = !cur.redeemed;
   $('second').hidden = !cur.second_allowed; $('secPin').value = ''; $('secErr').textContent = '';
   $('res').hidden = false;
-  if (store.get('autoPrint') === '1') printCoupon();
+  if ((store.get('autoPrint') || '1') === '1') setTimeout(printCoupon, 600);
 }
 function winPop(){
   document.getElementById('winPop')?.remove();
@@ -308,12 +312,12 @@ function winPop(){
 }
 function printCoupon(){
   if (!cur) return;
-  const how = cur.type === 'voucher' ? 'Show this coupon on your next purchase.' : 'Show this coupon at the counter to collect your gift.';
+  const how = cur.type === 'voucher' ? 'Show this coupon on your next purchase.' : (cur.redeemed ? 'Gift handed over at the counter.' : 'Show this coupon at the counter to collect your gift.');
   printSlip(`${sess.logo ? `<img src="${sess.logo}" alt="">` : ''}
     <div class="c l">${esc(brand)}</div><div class="c">SCRATCH &amp; WIN</div><div class="c">${esc(cur.campaign)}</div><hr>
     ${kv('Branch', cur.branch)}${kv('Date', fmtDT(cur.at))}${kv('Bill no', cur.bill)}${kv('Bill amount', rupee(cur.amount))}
     ${kv('Mobile', '******' + String(cur.mobile).slice(-4))}<hr>
-    ${cur.card_no === 2 ? '<div class="c b">2nd SCRATCH CARD</div>' : ''}<div class="c">YOU WON</div><div class="c xl">${esc(cur.prize)}</div><div class="c">${esc(TYPES[cur.type] || '')}</div><hr>
+    ${cur.card_no === 2 ? '<div class="c b">2nd SCRATCH CARD</div>' : ''}${cur.redeemed ? '<div class="c b">*** REDEEMED ***</div>' : ''}<div class="c">YOU WON</div><div class="c xl">${esc(cur.prize)}</div><div class="c">${esc(TYPES[cur.type] || '')}</div><hr>
     <div class="c">Coupon code</div><div class="c xl">${esc(cur.code)}</div><div class="c b">Valid till ${fmtD(cur.expires_on)}</div><hr>
     <div class="c">${esc(how)}</div><div class="c">${esc(sess.terms || '')}</div><div class="c">Thank you, visit again!</div>`);
 }
@@ -437,7 +441,7 @@ $('pinSave').addEventListener('click', async () => {
 });
 
 /* ---------- printer settings ---------- */
-$('paper').value = store.get('paper') || '80'; $('autoPrint').value = store.get('autoPrint') || '0';
+$('paper').value = store.get('paper') || '80'; $('autoPrint').value = store.get('autoPrint') || '1';
 $('paper').addEventListener('change', () => store.set('paper', $('paper').value));
 $('autoPrint').addEventListener('change', () => store.set('autoPrint', $('autoPrint').value));
 $('testPrint').addEventListener('click', () => printSlip(`${sess && sess.logo ? `<img src="${sess.logo}" alt="">` : ''}<div class="c l">${esc(brand)}</div><div class="c">PRINTER TEST</div><hr>${kv('Branch', sess ? sess.branch : '-')}${kv('Paper', ($('paper').value) + ' mm')}${kv('Time', fmtDT(new Date()))}<hr><div class="c xl">LESS-TEST1</div><hr><div class="c">If this looks right, the printer is ready.</div>`));
