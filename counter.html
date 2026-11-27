@@ -4,23 +4,30 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="theme-color" content="#741233">
-<title>Scratch &amp; Win – Counter</title>
-<link href="https://fonts.googleapis.com/css2?family=Baloo+Chettan+2:wght@500;700;800&family=Noto+Sans+Malayalam:wght@400;600&display=swap" rel="stylesheet">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<link rel="manifest" href="/manifest.webmanifest">
+<link rel="icon" href="/icon-192.png">
+<link rel="apple-touch-icon" href="/icon-192.png">
+<title>@less fashion – Scratch &amp; Win</title>
+<link href="https://fonts.googleapis.com/css2?family=Jost:wght@500;600;700&family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="style.css">
 </head>
 <body>
 <header>
   <div class="top">
-    <div><h1><span id="brand">Atlas Maharani</span> · <b>Scratch &amp; Win</b></h1><small id="campLbl"></small></div>
+    <div class="brand"><img data-logo alt="" hidden><div><h1><span data-brand>@less fashion</span> · <b>Scratch &amp; Win</b></h1><small id="campLbl"></small></div></div>
     <div class="who" id="who" hidden><span id="brLbl"></span><button id="logout" type="button">Change branch</button></div>
   </div>
   <nav role="tablist" id="tabs" hidden>
     <button role="tab" data-v="scratch" aria-selected="true">Scratch</button>
     <button role="tab" data-v="redeem">Redeem coupon</button>
+    <button role="tab" data-v="stock">Stock</button>
+    <button role="tab" data-v="closing">Day closing</button>
+    <button role="tab" data-v="printer">Printer</button>
   </nav>
 </header>
 <main>
-<!-- Login -->
 <section id="v-login" class="col" hidden>
   <h2>Branch login</h2>
   <p class="note">Enter the 6-digit branch PIN from Head Office. You only need to do this once on this tablet.</p>
@@ -32,7 +39,6 @@
   </form>
 </section>
 
-<!-- Scratch -->
 <section id="v-scratch" class="col" hidden>
   <form id="entry" novalidate>
     <h2>Bill details</h2>
@@ -48,184 +54,304 @@
   </form>
   <div id="play" hidden>
     <p class="hi" id="hi"></p>
-    <div class="sc"><div class="face"><div><div class="big" id="pName"></div><div class="t" id="pType"></div></div></div><canvas id="cv"></canvas></div>
+    <div class="sc"><div class="face" id="face"><div><div class="big" id="pName"></div><div class="t" id="pType"></div></div></div><canvas id="cv"></canvas></div>
     <div class="flex" style="justify-content:center;margin-top:10px"><button class="btn ghost sm" id="revealAll" type="button">Reveal all</button></div>
     <div class="res" id="res" hidden>
-      <div class="flex" style="justify-content:space-between"><span class="pill g" id="rType"></span><span class="note" id="rExp"></span></div>
+      <div class="flex between"><span class="pill g" id="rType"></span><span class="note" id="rExp"></span></div>
       <p style="margin:10px 0 2px">Coupon code</p><div class="code" id="rCode"></div>
       <div class="msg" id="rMsg"></div>
-      <div class="flex"><a class="btn wa" id="waBtn" target="_blank" rel="noopener">Send on WhatsApp</a></div>
+      <div class="flex">
+        <button class="btn dark" id="printCoupon" type="button">Print coupon</button>
+        <a class="btn wa" id="waBtn" target="_blank" rel="noopener">Send on WhatsApp</a>
+        <button class="btn gold" id="giveNow" type="button" hidden>Give gift now</button>
+      </div>
+      <p class="err" id="giveErr"></p>
       <button class="btn w" id="next" type="button">Next customer</button>
     </div>
   </div>
 </section>
 
-<!-- Redeem -->
 <section id="v-redeem" class="col" hidden>
   <h2>Redeem coupon</h2>
-  <p class="note">When a customer comes back with a coupon, enter the code to check it.</p>
-  <form id="rdForm" class="flex" novalidate><input id="rdCode" placeholder="ATL-XXXXX" style="flex:1 1 200px;text-transform:uppercase" autocomplete="off"><button class="btn" type="submit">Check</button></form>
+  <p class="note">When a customer comes back with a coupon, enter the code to check it. Gifts are taken out of this branch's stock.</p>
+  <form id="rdForm" class="flex" novalidate><input id="rdCode" placeholder="LESS-XXXXX" style="flex:1 1 200px;text-transform:uppercase" autocomplete="off"><button class="btn" type="submit">Check</button></form>
   <div id="rdOut"></div>
+</section>
+
+<section id="v-stock" hidden>
+  <div class="flex between"><h2 style="margin:0">Gift stock at this branch</h2><div class="flex"><button class="btn ghost sm" id="stRefresh" type="button">Refresh</button><button class="btn dark sm" id="stPrint" type="button">Print</button></div></div>
+  <p class="note">"Won, not collected" = customers who won this gift but have not taken it yet. "Free" = stock that can still be won.</p>
+  <div class="scroll"><table id="stTable"></table></div>
+</section>
+
+<section id="v-closing" hidden>
+  <div class="flex between">
+    <h2 style="margin:0">Day closing</h2>
+    <div class="flex"><input id="clDay" type="date" style="width:auto" aria-label="Date"><button class="btn sm" id="clLoad" type="button">Load</button></div>
+  </div>
+  <p class="note">At the end of the day, count the gift items in the shop and type the real count. Any difference is saved and the next day starts from your count.</p>
+  <div class="kpis" id="clKpis"></div>
+  <div class="scroll"><table id="clTable"></table></div>
+  <div id="clActions"></div>
+</section>
+
+<section id="v-printer" class="col" hidden>
+  <h2>Printer</h2>
+  <div class="row2">
+    <div><label for="paper">Thermal paper width</label><select id="paper"><option value="80">80 mm</option><option value="58">58 mm</option></select></div>
+    <div><label for="autoPrint">Print coupon automatically</label><select id="autoPrint"><option value="0">No</option><option value="1">Yes, after scratch</option></select></div>
+  </div>
+  <button class="btn dark w" id="testPrint" type="button">Test print</button>
+  <div class="card" style="margin-top:18px">
+    <h3>Printer setup</h3>
+    <p class="note"><b>Windows PC:</b> install the thermal printer's driver, set paper size to 80 mm (or 58 mm), and make it the default printer. In the print window choose that printer, Margins: None, and untick "Headers and footers".</p>
+    <p class="note"><b>Android tablet:</b> install a print-service app for your printer (for example RawBT for Bluetooth/USB thermal printers), enable it in Settings → Printing, then use the Print buttons here.</p>
+  </div>
 </section>
 
 <section id="v-config" class="col" hidden>
   <h2>Setup not complete</h2>
-  <p>Supabase URL and anon key are not set in config.js. See step 4 of the setup guide.</p>
+  <p>Supabase URL and anon key are not set in config.js. See the setup guide.</p>
 </section>
 </main>
 
 <script src="config.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
+<script src="common.js"></script>
 <script>
 {
-const $=id=>document.getElementById(id);
-const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-const C=window.APP_CONFIG||{};if(C.SUPABASE_URL)C.SUPABASE_URL=C.SUPABASE_URL.trim().replace(/\/(rest|auth)\/v1\/?$/,'').replace(/\/+$/,'');
-const TYPES={voucher:'Voucher',gift:'Free gift',bumper:'Bumper prize'};
-const ERR={
-  BRANCH_PIN:'Wrong PIN, or this branch has been turned off.',
-  CAMPAIGN_OFF:'The Scratch & Win offer is not running right now.',
-  BILL_EMPTY:'Enter the bill number.',
-  MIN_BILL:'This bill amount is below the minimum for a scratch.',
-  NAME_EMPTY:'Enter the customer name.',
-  MOBILE_BAD:'Enter a valid 10-digit mobile number.',
-  BILL_USED:'This bill number has already been used for a scratch.',
-  MOBILE_TODAY:'This mobile number has already scratched today.',
-  NO_PRIZE:'No prizes are set up. Please call Head Office.',
-  NOT_REDEEMABLE:'This coupon cannot be redeemed (already used or expired).'
-};
-const errText=e=>{const m=(e&&e.message)||'';for(const k in ERR)if(m.includes(k))return ERR[k];
-  return /fetch|network|Failed/i.test(m)?'Internet connection problem. Please try again.':'Something went wrong: '+m};
-const fmtD=s=>{if(!s)return'';const [y,m,d]=String(s).slice(0,10).split('-');return `${d}/${m}/${y}`};
-const rupee=n=>'₹'+Number(n||0).toLocaleString('en-IN');
-const store={get(k){try{return JSON.parse(localStorage.getItem('sw-'+k))}catch(e){return null}},set(k,v){try{localStorage.setItem('sw-'+k,JSON.stringify(v))}catch(e){}},del(k){try{localStorage.removeItem('sw-'+k)}catch(e){}}};
-
-$('brand').textContent=C.BRAND||'Atlas Maharani';
-const configured=C.SUPABASE_URL&&!C.SUPABASE_URL.includes('YOUR-PROJECT')&&C.SUPABASE_ANON_KEY&&!C.SUPABASE_ANON_KEY.includes('PASTE')&&window.supabase;
-const sb=configured?window.supabase.createClient(C.SUPABASE_URL,C.SUPABASE_ANON_KEY,{auth:{persistSession:false}}):null;
-let sess=store.get('session'); // {pin, branch, campaign, min_bill}
-let cur=null;
+const {$, esc, sb, configured, fmtD, fmtDT, rupee, num, today, TYPES, store, errText, applyBrand, printSlip, kv, confetti} = App;
+let sess = store.get('session'); // {pin, branch, campaign, min_bill, brand_name, logo, color, accent, terms, prizes:[...]}
+let cur = null, brand = '@less fashion';
 
 function view(v){
-  ['login','scratch','redeem','config'].forEach(x=>{$('v-'+x).hidden=x!==v});
-  document.querySelectorAll('#tabs button').forEach(b=>b.setAttribute('aria-selected',b.dataset.v===v));
+  ['login','scratch','redeem','stock','closing','printer','config'].forEach(x => { $('v-'+x).hidden = x !== v; });
+  document.querySelectorAll('#tabs button').forEach(b => b.setAttribute('aria-selected', b.dataset.v === v));
+  if (v === 'stock') loadStock();
+  if (v === 'closing') loadClosing();
+}
+document.querySelectorAll('#tabs button').forEach(b => b.addEventListener('click', () => view(b.dataset.v)));
+
+function paintHeader(){
+  brand = applyBrand(sess);
+  $('brLbl').textContent = sess.branch;
+  $('campLbl').textContent = `${sess.campaign} · Minimum bill ${rupee(sess.min_bill)}`;
+  $('minNote').textContent = `Only for bills of ${rupee(sess.min_bill)} and above. One scratch per bill.`;
+  document.title = `${brand} – Scratch & Win`;
+  loadLogo();
 }
 function boot(){
-  if(!configured){view('config');return}
-  if(!sess){$('who').hidden=true;$('tabs').hidden=true;$('campLbl').textContent='';view('login');$('pin').focus();return}
-  $('who').hidden=false;$('tabs').hidden=false;$('brLbl').textContent=sess.branch;
-  $('campLbl').textContent=`${sess.campaign} · Minimum bill ${rupee(sess.min_bill)}`;
-  $('minNote').textContent=`Only for bills of ${rupee(sess.min_bill)} and above. One scratch per bill.`;
-  view('scratch');
-  // refresh campaign info quietly
-  sb.rpc('branch_login',{p_pin:sess.pin}).then(({data,error})=>{
-    if(error&&String(error.message).includes('BRANCH_PIN')){store.del('session');sess=null;boot();return}
-    if(data){Object.assign(sess,data);store.set('session',sess);$('campLbl').textContent=`${sess.campaign} · Minimum bill ${rupee(sess.min_bill)}`;$('minNote').textContent=`Only for bills of ${rupee(sess.min_bill)} and above. One scratch per bill.`}
+  if (!configured) { view('config'); return; }
+  if (!sess) { applyBrand(store.get('brand') || {}); $('who').hidden = true; $('tabs').hidden = true; $('campLbl').textContent = ''; view('login'); $('pin').focus(); return; }
+  $('who').hidden = false; $('tabs').hidden = false; paintHeader(); view('scratch');
+  sb.rpc('branch_login', {p_pin: sess.pin}).then(({data, error}) => {
+    if (error && String(error.message).includes('BRANCH_PIN')) { store.del('session'); sess = null; boot(); return; }
+    if (data) { sess = {pin: sess.pin, ...data}; store.set('session', sess); store.set('brand', {brand_name:data.brand_name, logo:data.logo, color:data.color, accent:data.accent}); paintHeader(); }
   });
 }
-document.querySelectorAll('#tabs button').forEach(b=>b.addEventListener('click',()=>view(b.dataset.v)));
-
-$('loginForm').addEventListener('submit',async e=>{
-  e.preventDefault();const pin=$('pin').value.trim();
-  if(!/^\d{6}$/.test(pin)){$('loginErr').textContent='Enter the 6-digit PIN.';return}
-  $('loginErr').textContent='';
-  const {data,error}=await sb.rpc('branch_login',{p_pin:pin});
-  if(error){$('loginErr').textContent=errText(error);return}
-  sess={pin,...data};store.set('session',sess);$('pin').value='';boot();
+$('loginForm').addEventListener('submit', async e => {
+  e.preventDefault(); const pin = $('pin').value.trim();
+  if (!/^\d{6}$/.test(pin)) { $('loginErr').textContent = 'Enter the 6-digit PIN.'; return; }
+  $('loginErr').textContent = '';
+  const {data, error} = await sb.rpc('branch_login', {p_pin: pin});
+  if (error) { $('loginErr').textContent = errText(error); return; }
+  sess = {pin, ...data}; store.set('session', sess); $('pin').value = ''; boot();
 });
-$('logout').addEventListener('click',()=>{store.del('session');sess=null;boot()});
+$('logout').addEventListener('click', () => { store.del('session'); sess = null; boot(); });
 
 /* ---------- scratch ---------- */
-$('entry').addEventListener('submit',async e=>{
+$('entry').addEventListener('submit', async e => {
   e.preventDefault();
-  const bill=$('fBill').value.trim(),amt=Number($('fAmt').value),name=$('fName').value.trim(),mob=$('fMob').value.replace(/\D/g,'');
-  const err=m=>{$('fErr').textContent=m};
-  if(!bill)return err(ERR.BILL_EMPTY);
-  if(!amt)return err('Enter the bill amount.');
-  if(amt<Number(sess.min_bill))return err(`This bill is ${rupee(amt)}. Minimum ${rupee(sess.min_bill)} is needed for a scratch.`);
-  if(!name)return err(ERR.NAME_EMPTY);
-  if(!/^[6-9]\d{9}$/.test(mob))return err(ERR.MOBILE_BAD);
-  err('');$('goBtn').disabled=true;$('goBtn').textContent='Please wait…';
-  const {data,error}=await sb.rpc('do_scratch',{p_pin:sess.pin,p_bill:bill,p_amount:amt,p_name:name,p_mobile:mob});
-  $('goBtn').disabled=false;$('goBtn').textContent='Get scratch card';
-  if(error)return err(errText(error));
-  cur=data;
-  $('entry').hidden=true;$('play').hidden=false;$('res').hidden=true;
-  $('hi').textContent=`${cur.name}, scratch the gold area with your finger!`;
-  $('pName').textContent=cur.prize;$('pType').textContent=TYPES[cur.type]||'';
+  const bill = $('fBill').value.trim(), amt = Number($('fAmt').value), name = $('fName').value.trim(), mob = $('fMob').value.replace(/\D/g, '');
+  const err = m => { $('fErr').textContent = m; };
+  if (!bill) return err('Enter the bill number.');
+  if (!amt) return err('Enter the bill amount.');
+  if (amt < Number(sess.min_bill)) return err(`This bill is ${rupee(amt)}. Minimum ${rupee(sess.min_bill)} is needed for a scratch.`);
+  if (!name) return err('Enter the customer name.');
+  if (!/^[6-9]\d{9}$/.test(mob)) return err('Enter a valid 10-digit mobile number.');
+  err(''); $('goBtn').disabled = true; $('goBtn').textContent = 'Please wait…';
+  const {data, error} = await sb.rpc('do_scratch', {p_pin: sess.pin, p_bill: bill, p_amount: amt, p_name: name, p_mobile: mob});
+  $('goBtn').disabled = false; $('goBtn').textContent = 'Get scratch card';
+  if (error) return err(errText(error));
+  cur = data;
+  const p = (sess.prizes || []).find(x => x.id === cur.prize_id);
+  const face = $('face');
+  if (p && p.image) { face.className = 'face photo'; face.style.backgroundImage = `url("${p.image}")`; }
+  else { face.className = 'face'; face.style.backgroundImage = ''; }
+  $('entry').hidden = true; $('play').hidden = false; $('res').hidden = true; $('giveErr').textContent = '';
+  $('hi').textContent = `${cur.name}, scratch the card with your finger!`;
+  $('pName').textContent = cur.prize; $('pType').textContent = TYPES[cur.type] || '';
   requestAnimationFrame(paintFoil);
 });
 
-const cv=$('cv'),ctx=cv.getContext('2d',{willReadFrequently:true});let drawing=false,moves=0,revealed=false;
+const cv = $('cv'), ctx = cv.getContext('2d', {willReadFrequently: true});
+let drawing = false, moves = 0, revealed = false, logoImg = null;
 function paintFoil(){
-  const r=cv.getBoundingClientRect(),dpr=devicePixelRatio||1;
-  cv.width=Math.round(r.width*dpr);cv.height=Math.round(r.height*dpr);cv.style.opacity=1;revealed=false;
-  ctx.globalCompositeOperation='source-over';
-  const g=ctx.createLinearGradient(0,0,cv.width,cv.height);
-  g.addColorStop(0,'#f6d47a');g.addColorStop(.45,'#d79b26');g.addColorStop(.55,'#f3cc6a');g.addColorStop(1,'#b97f12');
-  ctx.fillStyle=g;ctx.fillRect(0,0,cv.width,cv.height);
-  ctx.fillStyle='rgba(255,255,255,.18)';
-  for(let x=-cv.height;x<cv.width;x+=26*dpr){ctx.beginPath();ctx.moveTo(x,0);ctx.lineTo(x+cv.height,cv.height);ctx.lineTo(x+cv.height+8*dpr,cv.height);ctx.lineTo(x+8*dpr,0);ctx.fill()}
-  ctx.fillStyle='#5a2a05';ctx.textAlign='center';ctx.textBaseline='middle';
-  ctx.font=`800 ${Math.round(Math.min(cv.width/11,40*dpr))}px "Baloo Chettan 2",sans-serif`;
-  ctx.fillText('Scratch here',cv.width/2,cv.height/2-14*dpr);
-  ctx.font=`600 ${Math.round(16*dpr)}px "Noto Sans Malayalam",sans-serif`;
-  ctx.fillText((C.BRAND||'Atlas Maharani')+' Scratch & Win',cv.width/2,cv.height/2+26*dpr);
+  const r = cv.getBoundingClientRect(), dpr = devicePixelRatio || 1;
+  cv.width = Math.round(r.width * dpr); cv.height = Math.round(r.height * dpr); cv.style.opacity = 1; revealed = false;
+  ctx.globalCompositeOperation = 'source-over';
+  const gold = getComputedStyle(document.documentElement).getPropertyValue('--gold').trim() || '#e2ad37';
+  const g = ctx.createLinearGradient(0, 0, cv.width, cv.height);
+  g.addColorStop(0, '#f7e2a6'); g.addColorStop(.45, gold); g.addColorStop(.55, '#f5d98a'); g.addColorStop(1, gold);
+  ctx.fillStyle = g; ctx.fillRect(0, 0, cv.width, cv.height);
+  ctx.fillStyle = 'rgba(255,255,255,.18)';
+  for (let x = -cv.height; x < cv.width; x += 26 * dpr) { ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x + cv.height, cv.height); ctx.lineTo(x + cv.height + 8 * dpr, cv.height); ctx.lineTo(x + 8 * dpr, 0); ctx.fill(); }
+  let y = cv.height / 2;
+  if (logoImg && logoImg.complete && logoImg.naturalWidth) {
+    const h = cv.height * .26, w = Math.min(cv.width * .5, h * logoImg.naturalWidth / logoImg.naturalHeight);
+    ctx.fillStyle = 'rgba(255,255,255,.9)'; ctx.fillRect((cv.width - w) / 2 - 8 * dpr, cv.height * .12 - 6 * dpr, w + 16 * dpr, h + 12 * dpr);
+    ctx.drawImage(logoImg, (cv.width - w) / 2, cv.height * .12, w, h); y = cv.height * .62;
+  }
+  ctx.fillStyle = '#4a2a05'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  ctx.font = `700 ${Math.round(Math.min(cv.width / 10, 40 * dpr))}px Jost,sans-serif`;
+  ctx.fillText('SCRATCH HERE', cv.width / 2, y - 6 * dpr);
+  ctx.font = `600 ${Math.round(16 * dpr)}px Inter,sans-serif`;
+  ctx.fillText(brand + ' · Scratch & Win', cv.width / 2, y + 30 * dpr);
 }
-function cleared(){const d=ctx.getImageData(0,0,cv.width,cv.height).data;let c=0,n=0;for(let i=3;i<d.length;i+=160){n++;if(d[i]<20)c++}return c/n}
+function loadLogo(){ if (sess && sess.logo) { logoImg = new Image(); logoImg.src = sess.logo; } }
+function cleared(){ const d = ctx.getImageData(0, 0, cv.width, cv.height).data; let c = 0, n = 0; for (let i = 3; i < d.length; i += 160) { n++; if (d[i] < 20) c++; } return c / n; }
 function scratchAt(e){
-  const r=cv.getBoundingClientRect(),dpr=cv.width/r.width;
-  ctx.globalCompositeOperation='destination-out';ctx.beginPath();
-  ctx.arc((e.clientX-r.left)*dpr,(e.clientY-r.top)*dpr,26*dpr,0,Math.PI*2);ctx.fill();
-  if(++moves%10===0&&cleared()>.45)reveal();
+  const r = cv.getBoundingClientRect(), dpr = cv.width / r.width;
+  ctx.globalCompositeOperation = 'destination-out'; ctx.beginPath();
+  ctx.arc((e.clientX - r.left) * dpr, (e.clientY - r.top) * dpr, 28 * dpr, 0, Math.PI * 2); ctx.fill();
+  if (++moves % 10 === 0 && cleared() > .45) reveal();
 }
-cv.addEventListener('pointerdown',e=>{if(revealed)return;drawing=true;cv.setPointerCapture(e.pointerId);scratchAt(e)});
-cv.addEventListener('pointermove',e=>{if(drawing&&!revealed)scratchAt(e)});
-['pointerup','pointercancel'].forEach(t=>cv.addEventListener(t,()=>{drawing=false;if(!revealed&&cleared()>.45)reveal()}));
-$('revealAll').addEventListener('click',reveal);
+cv.addEventListener('pointerdown', e => { if (revealed) return; drawing = true; cv.setPointerCapture(e.pointerId); scratchAt(e); });
+cv.addEventListener('pointermove', e => { if (drawing && !revealed) scratchAt(e); });
+['pointerup','pointercancel'].forEach(t => cv.addEventListener(t, () => { drawing = false; if (!revealed && cleared() > .45) reveal(); }));
+$('revealAll').addEventListener('click', reveal);
 function reveal(){
-  if(revealed||!cur)return;revealed=true;cv.style.opacity=0;setTimeout(()=>ctx.clearRect(0,0,cv.width,cv.height),650);confetti();
-  $('rType').textContent=TYPES[cur.type]||'';$('rCode').textContent=cur.code;$('rExp').textContent=`Valid till ${fmtD(cur.expires_on)}`;
-  const how=cur.type==='voucher'?'Show this code on your next purchase.':'Show this code at the shop counter to collect your gift.';
-  const msg=`Hi ${cur.name},\nCongratulations! You won ${cur.prize} in the ${C.BRAND||'Atlas Maharani'} ${cur.campaign} Scratch & Win!\nCoupon code: ${cur.code}\n${how}\nValid till ${fmtD(cur.expires_on)}.\nThank you, visit again! – ${cur.branch}`;
-  $('rMsg').textContent=msg;
-  $('waBtn').href=`https://wa.me/91${cur.mobile}?text=${encodeURIComponent(msg)}`;
-  $('res').hidden=false;
+  if (revealed || !cur) return; revealed = true; cv.style.opacity = 0; setTimeout(() => ctx.clearRect(0, 0, cv.width, cv.height), 650); confetti();
+  $('rType').textContent = TYPES[cur.type] || ''; $('rCode').textContent = cur.code; $('rExp').textContent = `Valid till ${fmtD(cur.expires_on)}`;
+  const how = cur.type === 'voucher' ? 'Show this code on your next purchase.' : 'Show this code at the shop counter to collect your gift.';
+  const msg = `Hi ${cur.name},\nCongratulations! You won ${cur.prize} in the ${brand} ${cur.campaign} Scratch & Win!\nCoupon code: ${cur.code}\n${how}\nValid till ${fmtD(cur.expires_on)}.\nThank you, visit again! – ${brand}, ${cur.branch}`;
+  $('rMsg').textContent = msg;
+  $('waBtn').href = `https://wa.me/91${cur.mobile}?text=${encodeURIComponent(msg)}`;
+  $('giveNow').hidden = !cur.has_item; $('giveNow').disabled = false; $('giveNow').textContent = 'Give gift now';
+  $('res').hidden = false;
+  if (store.get('autoPrint') === '1') printCoupon();
 }
-function confetti(){
-  if(matchMedia('(prefers-reduced-motion: reduce)').matches)return;
-  const cols=['#e2ad37','#741233','#ffffff','#f3cc6a','#1d8a4b'];
-  for(let i=0;i<70;i++){const s=document.createElement('span');s.className='confetti';s.style.left=Math.random()*100+'vw';s.style.background=cols[i%cols.length];s.style.animationDelay=Math.random()*.5+'s';document.body.appendChild(s);setTimeout(()=>s.remove(),2600)}
+function printCoupon(){
+  if (!cur) return;
+  const how = cur.type === 'voucher' ? 'Show this coupon on your next purchase.' : 'Show this coupon at the counter to collect your gift.';
+  printSlip(`${sess.logo ? `<img src="${sess.logo}" alt="">` : ''}
+    <div class="c l">${esc(brand)}</div><div class="c">SCRATCH &amp; WIN</div><div class="c">${esc(cur.campaign)}</div><hr>
+    ${kv('Branch', cur.branch)}${kv('Date', fmtDT(cur.at))}${kv('Bill no', cur.bill)}${kv('Bill amount', rupee(cur.amount))}
+    ${kv('Customer', cur.name)}${kv('Mobile', '******' + String(cur.mobile).slice(-4))}<hr>
+    <div class="c">YOU WON</div><div class="c xl">${esc(cur.prize)}</div><div class="c">${esc(TYPES[cur.type] || '')}</div><hr>
+    <div class="c">Coupon code</div><div class="c xl">${esc(cur.code)}</div><div class="c b">Valid till ${fmtD(cur.expires_on)}</div><hr>
+    <div class="c">${esc(how)}</div><div class="c">${esc(sess.terms || '')}</div><div class="c">Thank you, visit again!</div>`);
 }
-$('next').addEventListener('click',()=>{cur=null;['fBill','fAmt','fName','fMob'].forEach(i=>$(i).value='');$('play').hidden=true;$('entry').hidden=false;$('fBill').focus()});
-addEventListener('resize',()=>{if(!$('play').hidden&&!revealed)paintFoil()});
+$('printCoupon').addEventListener('click', printCoupon);
+$('giveNow').addEventListener('click', async () => {
+  const b = $('giveNow'); b.disabled = true; $('giveErr').textContent = '';
+  const {error} = await sb.rpc('redeem_coupon', {p_pin: sess.pin, p_code: cur.code});
+  if (error) { $('giveErr').textContent = errText(error); b.disabled = false; return; }
+  b.textContent = 'Gift given ✓';
+});
+$('next').addEventListener('click', () => { cur = null; ['fBill','fAmt','fName','fMob'].forEach(i => $(i).value = ''); $('play').hidden = true; $('entry').hidden = false; $('fBill').focus(); });
+addEventListener('resize', () => { if (!$('play').hidden && !revealed) paintFoil(); });
 
 /* ---------- redeem ---------- */
-$('rdForm').addEventListener('submit',e=>{e.preventDefault();checkCode($('rdCode').value.trim().toUpperCase())});
+$('rdForm').addEventListener('submit', e => { e.preventDefault(); checkCode($('rdCode').value.trim().toUpperCase()); });
 async function checkCode(code){
-  const out=$('rdOut');if(!code){out.innerHTML='';return}
-  out.innerHTML='<p class="note">Checking…</p>';
-  const {data:s,error}=await sb.rpc('check_coupon',{p_pin:sess.pin,p_code:code});
-  if(error){out.innerHTML=`<p class="err">${esc(errText(error))}</p>`;return}
-  if(!s.found){out.innerHTML=`<div class="res"><span class="pill bad">Code not found</span><p>This code is not in the system. Check the customer's message again.</p></div>`;return}
-  const pill=s.status==='used'?'<span class="pill bad">Already used</span>':s.expired?'<span class="pill bad">Expired</span>':'<span class="pill ok">Valid</span>';
-  const act=s.type==='voucher'?'Mark as redeemed':'Mark gift as given';
-  out.innerHTML=`<div class="res">${pill}
-    <div class="big" style="font-size:30px;margin:10px 0 4px">${esc(s.prize)}</div>
+  const out = $('rdOut'); if (!code) { out.innerHTML = ''; return; }
+  out.innerHTML = '<p class="note">Checking…</p>';
+  const {data: s, error} = await sb.rpc('check_coupon', {p_pin: sess.pin, p_code: code});
+  if (error) { out.innerHTML = `<p class="err">${esc(errText(error))}</p>`; return; }
+  if (!s.found) { out.innerHTML = `<div class="res"><span class="pill bad">Code not found</span><p>This code is not in the system. Check the customer's message again.</p></div>`; return; }
+  const pill = s.status === 'used' ? '<span class="pill bad">Already used</span>' : s.expired ? '<span class="pill bad">Expired</span>' : '<span class="pill ok">Valid</span>';
+  const act = s.type === 'voucher' ? 'Mark as redeemed' : 'Give gift & mark as given';
+  const stockLine = s.has_item && s.status === 'new' ? `<tr><th>Stock here</th><td>${num(s.stock_here)} ${Number(s.stock_here) < 1 ? '<span class="pill bad">No stock</span>' : ''}</td></tr>` : '';
+  out.innerHTML = `<div class="res">${pill}
+    <div class="big" style="font-size:28px;margin:10px 0 4px">${esc(s.prize)}</div>
     <table><tbody>
     <tr><th>Customer</th><td>${esc(s.name)} · ${esc(s.mobile)}</td></tr>
     <tr><th>Scratched at</th><td>${esc(s.branch)} · ${fmtD(s.day)} · Bill ${esc(s.bill)}</td></tr>
-    <tr><th>Valid till</th><td>${fmtD(s.expires_on)}</td></tr>
-    ${s.status==='used'?`<tr><th>Used at</th><td>${esc(s.used_branch)} · ${fmtD(s.used_at)}</td></tr>`:''}
+    <tr><th>Valid till</th><td>${fmtD(s.expires_on)}</td></tr>${stockLine}
+    ${s.status === 'used' ? `<tr><th>Used at</th><td>${esc(s.used_branch)} · ${fmtDT(s.used_at)}</td></tr>` : ''}
     </tbody></table>
-    ${s.status==='new'&&!s.expired?`<button class="btn w" id="doRedeem" type="button">${act}</button>`:''}
+    ${s.status === 'new' && !s.expired ? `<button class="btn w" id="doRedeem" type="button">${act}</button>` : ''}
     <p class="err" id="rdErr"></p></div>`;
-  const b=$('doRedeem');
-  if(b)b.addEventListener('click',async()=>{b.disabled=true;
-    const {error}=await sb.rpc('redeem_coupon',{p_pin:sess.pin,p_code:code});
-    if(error){$('rdErr').textContent=errText(error);b.disabled=false;return}
-    checkCode(code)});
+  const b = $('doRedeem');
+  if (b) b.addEventListener('click', async () => {
+    b.disabled = true;
+    const {error} = await sb.rpc('redeem_coupon', {p_pin: sess.pin, p_code: code});
+    if (error) { $('rdErr').textContent = errText(error); b.disabled = false; return; }
+    checkCode(code);
+  });
 }
+
+/* ---------- stock ---------- */
+let stockRows = [];
+async function loadStock(){
+  $('stTable').innerHTML = '<tr><td class="note">Loading…</td></tr>';
+  const {data, error} = await sb.rpc('branch_stock', {p_pin: sess.pin});
+  if (error) { $('stTable').innerHTML = `<tr><td class="err">${esc(errText(error))}</td></tr>`; return; }
+  stockRows = data;
+  $('stTable').innerHTML = `<thead><tr><th>Item</th><th class="n">In stock</th><th class="n">Won, not collected</th><th class="n">Free</th></tr></thead><tbody>` +
+    (data.length ? data.map(r => { const free = Number(r.stock) - Number(r.pending);
+      return `<tr><td>${esc(r.name)}</td><td class="n">${num(r.stock)} ${esc(r.unit)}</td><td class="n">${num(r.pending)}</td><td class="n ${free <= 0 ? 'neg' : ''}">${num(free)}</td></tr>`; }).join('')
+    : '<tr><td colspan="4">No stock items yet. Head Office adds them.</td></tr>') + '</tbody>';
+}
+$('stRefresh').addEventListener('click', loadStock);
+$('stPrint').addEventListener('click', () => printSlip(`<div class="c l">${esc(brand)}</div><div class="c">GIFT STOCK</div><div class="c">${esc(sess.branch)}</div><div class="c">${fmtDT(new Date())}</div><hr>
+  <table><tr><th>Item</th><th class="r">Stock</th><th class="r">Pend</th></tr>${stockRows.map(r => `<tr><td>${esc(r.name)}</td><td class="r">${num(r.stock)}</td><td class="r">${num(r.pending)}</td></tr>`).join('')}</table><hr>`));
+
+/* ---------- day closing ---------- */
+$('clDay').value = today(); $('clDay').max = today();
+$('clLoad').addEventListener('click', loadClosing);
+let clData = null;
+async function loadClosing(){
+  $('clTable').innerHTML = '<tr><td class="note">Loading…</td></tr>'; $('clActions').innerHTML = ''; $('clKpis').innerHTML = '';
+  const {data, error} = await sb.rpc('closing_preview', {p_pin: sess.pin, p_day: $('clDay').value || today()});
+  if (error) { $('clTable').innerHTML = `<tr><td class="err">${esc(errText(error))}</td></tr>`; return; }
+  clData = data; renderClosing();
+}
+function renderClosing(){
+  const d = clData, s = (d.closed && d.closed.summary) || d.summary || {}, closed = !!d.closed;
+  $('clKpis').innerHTML = [[num(s.scratches), 'Scratches'], [rupee(s.bill_total), 'Bill amount'], [num(s.vouchers_won), 'Vouchers won'], [num(s.gifts_won), 'Gifts won'], [num(s.redeemed_here), 'Coupons redeemed here']]
+    .map(([v, l]) => `<div class="kpi"><div class="big">${v}</div><span>${l}</span></div>`).join('');
+  const lines = closed ? d.closed.lines : d.lines;
+  $('clTable').innerHTML = `<thead><tr><th>Item</th><th class="n">Opening</th><th class="n">Received</th><th class="n">Given</th><th class="n">Sent out</th><th class="n">Adjusted</th><th class="n">System balance</th><th class="n">Physical count</th>${closed ? '<th class="n">Difference</th>' : ''}</tr></thead><tbody>` +
+    (lines.length ? lines.map(l => `<tr><td>${esc(l.name)}</td><td class="n">${num(l.opening)}</td><td class="n">${num(l.received)}</td><td class="n">${num(l.issued)}</td><td class="n">${num(l.sent_out)}</td><td class="n">${num(l.adjusted)}</td><td class="n b">${num(l.closing)}</td>
+      ${closed ? `<td class="n">${num(l.physical)}</td><td class="n ${l.difference < 0 ? 'neg' : l.difference > 0 ? 'pos' : ''}">${l.difference > 0 ? '+' : ''}${num(l.difference)}</td>`
+               : `<td class="n"><input type="number" min="0" inputmode="numeric" data-item="${l.item_id}" value="${esc(l.closing)}" style="width:100px" aria-label="Physical count ${esc(l.name)}"></td>`}</tr>`).join('')
+    : '<tr><td colspan="9">No stock items.</td></tr>') + '</tbody>';
+  $('clActions').innerHTML = closed
+    ? `<p class="okmsg">Closed on ${fmtDT(d.closed.closed_at)}${d.closed.note ? ' · Note: ' + esc(d.closed.note) : ''}</p><button class="btn dark" id="clPrint" type="button">Print closing report</button>`
+    : `<label for="clNote">Note (optional)</label><input id="clNote" placeholder="e.g. 1 towel damaged">
+       <div class="flex" style="margin-top:14px"><button class="btn" id="clSave" type="button">Save day closing</button><button class="btn ghost" id="clPrint" type="button">Print preview</button></div>
+       <p class="note">After saving, this day cannot be changed from the tablet.</p><p class="err" id="clErr"></p>`;
+  $('clPrint').addEventListener('click', printClosing);
+  const sv = $('clSave');
+  if (sv) { let armed = false; sv.addEventListener('click', async () => {
+    if (!armed) { armed = true; sv.textContent = 'Sure? Tap again to save'; setTimeout(() => { armed = false; if (sv.isConnected) sv.textContent = 'Save day closing'; }, 4000); return; }
+    sv.disabled = true; const counts = {};
+    document.querySelectorAll('#clTable input[data-item]').forEach(i => { counts[i.dataset.item] = Math.max(0, Number(i.value) || 0); });
+    const {data, error} = await sb.rpc('save_closing', {p_pin: sess.pin, p_day: d.day, p_counts: counts, p_note: $('clNote').value});
+    if (error) { $('clErr').textContent = errText(error); sv.disabled = false; return; }
+    clData = data; renderClosing();
+  }); }
+}
+function printClosing(){
+  const d = clData, closed = !!d.closed, s = (closed ? d.closed.summary : d.summary) || {}, lines = closed ? d.closed.lines : d.lines;
+  const phys = {}; document.querySelectorAll('#clTable input[data-item]').forEach(i => { phys[i.dataset.item] = Number(i.value) || 0; });
+  printSlip(`${sess.logo ? `<img src="${sess.logo}" alt="">` : ''}<div class="c l">${esc(brand)}</div><div class="c b">DAY CLOSING ${closed ? '' : '(NOT SAVED)'}</div>
+    <div class="c">${esc(d.branch)} · ${fmtD(d.day)}</div><hr>
+    ${kv('Scratches', num(s.scratches))}${kv('Bill amount', rupee(s.bill_total))}${kv('Vouchers won', num(s.vouchers_won))}${kv('Gifts won', num(s.gifts_won))}${kv('Redeemed here', num(s.redeemed_here))}<hr>
+    <table><tr><th>Item</th><th class="r">Open</th><th class="r">In</th><th class="r">Out</th><th class="r">Sys</th><th class="r">Phy</th><th class="r">Diff</th></tr>
+    ${lines.map(l => { const p = closed ? l.physical : (phys[l.item_id] ?? l.closing), df = closed ? l.difference : p - l.closing;
+      return `<tr><td>${esc(l.name)}</td><td class="r">${num(l.opening)}</td><td class="r">${num(l.received)}</td><td class="r">${num(Number(l.issued) + Number(l.sent_out))}</td><td class="r">${num(l.closing)}</td><td class="r">${num(p)}</td><td class="r">${df > 0 ? '+' : ''}${num(df)}</td></tr>`; }).join('')}</table><hr>
+    ${closed ? kv('Closed at', fmtDT(d.closed.closed_at)) : ''}${closed && d.closed.note ? `<div>Note: ${esc(d.closed.note)}</div>` : ''}
+    <br><div>Branch manager: ____________</div><br><div>Signature: ____________</div>`);
+}
+
+/* ---------- printer settings ---------- */
+$('paper').value = store.get('paper') || '80'; $('autoPrint').value = store.get('autoPrint') || '0';
+$('paper').addEventListener('change', () => store.set('paper', $('paper').value));
+$('autoPrint').addEventListener('change', () => store.set('autoPrint', $('autoPrint').value));
+$('testPrint').addEventListener('click', () => printSlip(`${sess && sess.logo ? `<img src="${sess.logo}" alt="">` : ''}<div class="c l">${esc(brand)}</div><div class="c">PRINTER TEST</div><hr>${kv('Branch', sess ? sess.branch : '-')}${kv('Paper', ($('paper').value) + ' mm')}${kv('Time', fmtDT(new Date()))}<hr><div class="c xl">LESS-TEST1</div><hr><div class="c">If this looks right, the printer is ready.</div>`));
 
 boot();
 }

@@ -4,16 +4,22 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="theme-color" content="#741233">
-<title>Scratch &amp; Win</title>
-<link href="https://fonts.googleapis.com/css2?family=Baloo+Chettan+2:wght@500;700;800&family=Noto+Sans+Malayalam:wght@400;600&display=swap" rel="stylesheet">
+<link rel="manifest" href="/manifest.webmanifest">
+<link rel="icon" href="/icon-192.png">
+<title>@less fashion – Scratch &amp; Win</title>
+<link href="https://fonts.googleapis.com/css2?family=Jost:wght@500;600;700&family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="style.css">
 </head>
 <body>
-<header><div class="top"><div><h1>Atlas Maharani · <b>Scratch &amp; Win</b></h1></div></div></header>
+<header><div class="top"><div class="brand"><img data-logo alt="" hidden><div><h1><span data-brand>@less fashion</span> · <b>Scratch &amp; Win</b></h1></div></div></div></header>
 <main class="col">
   <h2>Where do you want to go?</h2>
   <a class="btn gold w" href="counter.html">Shop counter tablet</a>
-  <a class="btn w" href="admin.html">Head Office Admin</a>
+  <a class="btn w" href="admin.html">Head Office admin</a>
+  <p class="note" style="margin-top:18px">Tip: on the tablet, open the counter page and choose "Add to Home screen" / "Install app" from the browser menu.</p>
 </main>
+<script src="config.js"></script>
+<script src="common.js"></script>
+<script>App.applyBrand(App.store.get('brand')||{});</script>
 </body>
 </html>

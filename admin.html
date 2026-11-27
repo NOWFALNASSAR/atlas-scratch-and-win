@@ -4,22 +4,26 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="theme-color" content="#741233">
-<title>Scratch &amp; Win – Head Office</title>
-<link href="https://fonts.googleapis.com/css2?family=Baloo+Chettan+2:wght@500;700;800&family=Noto+Sans+Malayalam:wght@400;600&display=swap" rel="stylesheet">
+<link rel="manifest" href="/manifest.webmanifest">
+<link rel="icon" href="/icon-192.png">
+<title>@less fashion – Head Office</title>
+<link href="https://fonts.googleapis.com/css2?family=Jost:wght@500;600;700&family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="style.css">
 <script>new MutationObserver(()=>{for(const c of document.querySelectorAll('.stack td:not([data-l])')){let i=0,p=c;while(p=p.previousElementSibling)i+=p.colSpan;c.dataset.l=c.closest('table').rows[0].cells[i]?.textContent||''}}).observe(document,{childList:true,subtree:true})</script>
 </head>
 <body>
 <header>
   <div class="top">
-    <div><h1><span id="brand">Atlas Maharani</span> · <b>Scratch &amp; Win</b></h1><small>Head Office Admin</small></div>
+    <div class="brand"><img data-logo alt="" hidden><div><h1><span data-brand>@less fashion</span> · <b>Scratch &amp; Win</b></h1><small>Head Office</small></div></div>
     <div class="who" id="who" hidden><span id="meLbl"></span><button id="logout" type="button">Logout</button></div>
   </div>
   <nav role="tablist" id="tabs" hidden>
     <button role="tab" data-v="dash" aria-selected="true">Dashboard</button>
-    <button role="tab" data-v="camp">Campaign</button>
+    <button role="tab" data-v="stock">Stock</button>
+    <button role="tab" data-v="closings">Day closings</button>
     <button role="tab" data-v="prizes">Prizes</button>
     <button role="tab" data-v="branches">Branches</button>
+    <button role="tab" data-v="camp">Campaign &amp; branding</button>
     <button role="tab" data-v="log">Scratch log</button>
   </nav>
 </header>
@@ -34,8 +38,9 @@
   </form>
 </section>
 
+<!-- Dashboard -->
 <section id="v-dash" hidden>
-  <div class="flex" style="justify-content:space-between;margin-bottom:14px">
+  <div class="flex between" style="margin-bottom:14px">
     <h2 style="margin:0">Dashboard</h2>
     <div class="flex">
       <input id="dFrom" type="date" style="width:auto" aria-label="From">
@@ -49,9 +54,97 @@
   <div class="scroll"><table id="brTable"></table></div>
 </section>
 
+<!-- Stock -->
+<section id="v-stock" hidden>
+  <div class="flex between"><h2 style="margin:0">Gift stock – all locations</h2>
+    <div class="flex"><label for="paper" style="margin:0">Print paper</label><select id="paper" style="width:auto"><option value="80">80 mm</option><option value="58">58 mm</option></select>
+    <button class="btn ghost sm" id="stRefresh" type="button">Refresh</button></div></div>
+  <p class="note">Each cell: stock in hand. Small number = won by customers but not collected yet.</p>
+  <div class="scroll"><table id="stMatrix" class="sticky1"></table></div>
+
+  <div class="grid2" style="margin-top:22px">
+    <form class="card" id="inForm" novalidate>
+      <h3>Stock entry (goods received)</h3>
+      <label for="inItem">Item</label><select id="inItem"></select>
+      <label for="inLoc">Received at</label><select id="inLoc"></select>
+      <div class="row2"><div><label for="inQty">Quantity</label><input id="inQty" type="number" min="1" inputmode="numeric"></div>
+      <div><label for="inNote">Note / bill no</label><input id="inNote"></div></div>
+      <button class="btn w" type="submit">Add stock</button>
+      <p class="err" id="inMsg"></p>
+    </form>
+    <form class="card" id="trForm" novalidate>
+      <h3>Stock transfer</h3>
+      <label for="trItem">Item</label><select id="trItem"></select>
+      <div class="row2"><div><label for="trFrom">From</label><select id="trFrom"></select></div><div><label for="trTo">To</label><select id="trTo"></select></div></div>
+      <div class="row2"><div><label for="trQty">Quantity</label><input id="trQty" type="number" min="1" inputmode="numeric"></div>
+      <div><label for="trNote">Note</label><input id="trNote"></div></div>
+      <p class="note" id="trAvail"></p>
+      <button class="btn w" type="submit">Transfer &amp; print slip</button>
+      <p class="err" id="trMsg"></p>
+    </form>
+  </div>
+
+  <div class="box"><h3>Stock items</h3>
+    <form id="itForm" class="flex" novalidate><input id="itName" placeholder="Item name (e.g. Towel)" style="flex:2 1 200px"><input id="itUnit" placeholder="Unit" value="pcs" style="flex:0 1 110px"><button class="btn sm" type="submit">Add item</button></form>
+    <p class="err" id="itMsg"></p>
+    <table class="stack" id="itTable"></table>
+  </div>
+
+  <div class="box"><div class="flex between"><h3>Stock movements</h3>
+    <div class="flex"><select id="mvItem" style="width:auto" aria-label="Item"></select><select id="mvLoc" style="width:auto" aria-label="Location"></select><button class="btn sm" id="mvGo" type="button">Show</button></div></div>
+    <p class="note">Latest 200 movements.</p>
+    <table class="stack" id="mvTable"></table>
+  </div>
+</section>
+
+<!-- Closings -->
+<section id="v-closings" hidden>
+  <div class="flex between"><h2 style="margin:0">Day closings</h2>
+    <div class="flex"><input id="cdDay" type="date" style="width:auto" aria-label="Date"><button class="btn sm" id="cdGo" type="button">Show</button></div></div>
+  <p class="note">Which branches closed the day, and any difference between system stock and physical count. Tap a branch to see details.</p>
+  <table class="stack" id="cdTable"></table>
+  <div id="cdDetail"></div>
+</section>
+
+<!-- Prizes -->
+<section id="v-prizes" hidden>
+  <h2>Prizes</h2>
+  <p class="note">Changes save instantly. Picture shows on the scratch card. "Stock item" links a gift to stock: a branch only gives that prize while it has free stock. Higher "Weight" = higher chance. "Limit" = maximum per branch per day (0 = unlimited).</p>
+  <div class="scroll"><table class="stack" id="pzTable"></table></div>
+  <div class="warn" id="pzWarn"></div>
+  <button class="btn ghost sm" id="addPz" type="button" style="margin-top:12px">+ Add prize</button>
+  <input type="file" id="pzFile" accept="image/*" hidden>
+</section>
+
+<!-- Branches -->
+<section id="v-branches" hidden>
+  <h2>Branches</h2>
+  <p class="note">Give each branch a different 6-digit PIN, and share it only with that branch manager. To change a PIN, type the new one and Save; the old PIN stops working immediately.</p>
+  <div class="scroll"><table class="stack" id="brList"></table></div>
+  <div class="box"><h3>New branch</h3>
+    <form id="brForm" class="flex" novalidate>
+      <input id="brName" placeholder="Branch name" style="flex:2 1 220px">
+      <input id="brPin" placeholder="6-digit PIN" inputmode="numeric" maxlength="6" style="flex:1 1 140px">
+      <button class="btn sm" type="submit">Add</button>
+    </form>
+    <p class="err" id="brErr"></p>
+  </div>
+</section>
+
+<!-- Campaign & branding -->
 <section id="v-camp" class="col" hidden>
-  <h2>Campaign settings</h2>
   <form id="campForm" novalidate>
+    <h2>Branding</h2>
+    <label for="bName">Brand name</label><input id="bName">
+    <label>Logo (shows on tablets, scratch card and printed slips)</label>
+    <div class="flex"><img id="logoPrev" class="logoPrev" alt="" hidden><input type="file" id="logoFile" accept="image/*" style="flex:1 1 200px"><button class="btn ghost sm" id="logoDel" type="button">Remove logo</button></div>
+    <div class="row2">
+      <div><label for="bColor">Main colour</label><input id="bColor" type="color" style="padding:4px"></div>
+      <div><label for="bAccent">Gold / accent colour</label><input id="bAccent" type="color" style="padding:4px"></div>
+    </div>
+    <label for="bTerms">Terms line (printed on coupons)</label><input id="bTerms">
+
+    <h2 style="margin-top:28px">Campaign</h2>
     <label for="cName">Campaign name</label><input id="cName">
     <div class="row2">
       <div><label for="cMin">Minimum bill amount (₹)</label><input id="cMin" type="number" min="0"></div>
@@ -67,28 +160,7 @@
   </form>
 </section>
 
-<section id="v-prizes" hidden>
-  <h2>Prizes</h2>
-  <p class="note">Changes save instantly. Higher "Weight" = higher chance of winning that prize. "Limit" = maximum per branch per day (0 = unlimited). Turn a prize "Off" if you don't want it.</p>
-  <div class="scroll"><table class="stack" id="pzTable"></table></div>
-  <div class="warn" id="pzWarn"></div>
-  <button class="btn ghost sm" id="addPz" type="button" style="margin-top:12px">+ Add prize</button>
-</section>
-
-<section id="v-branches" hidden>
-  <h2>Branches</h2>
-  <p class="note">Give each branch a different 6-digit PIN, and share it only with that branch manager. To change a PIN, type the new one and Save; the old PIN stops working immediately.</p>
-  <div class="scroll"><table class="stack" id="brList"></table></div>
-  <div class="box"><h3>New branch</h3>
-    <form id="brForm" class="flex" novalidate>
-      <input id="brName" placeholder="Branch name" style="flex:2 1 220px">
-      <input id="brPin" placeholder="6-digit PIN" inputmode="numeric" maxlength="6" style="flex:1 1 140px">
-      <button class="btn sm" type="submit">Add</button>
-    </form>
-    <p class="err" id="brErr"></p>
-  </div>
-</section>
-
+<!-- Log -->
 <section id="v-log" hidden>
   <h2>Scratch log</h2>
   <form id="logForm" class="flex" novalidate>
@@ -102,166 +174,307 @@
 
 <section id="v-config" class="col" hidden>
   <h2>Setup not complete</h2>
-  <p>Supabase URL and anon key are not set in config.js. See step 4 of the setup guide.</p>
+  <p>Supabase URL and anon key are not set in config.js. See the setup guide.</p>
 </section>
 </main>
 
 <script src="config.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
+<script src="common.js"></script>
 <script>
 {
-const $=id=>document.getElementById(id);
-const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-const C=window.APP_CONFIG||{};if(C.SUPABASE_URL)C.SUPABASE_URL=C.SUPABASE_URL.trim().replace(/\/(rest|auth)\/v1\/?$/,'').replace(/\/+$/,'');
-const TYPES={voucher:'Voucher',gift:'Free gift',bumper:'Bumper'};
-const fmtD=s=>{if(!s)return'';const [y,m,d]=String(s).slice(0,10).split('-');return `${d}/${m}/${y}`};
-const rupee=n=>'₹'+Number(n||0).toLocaleString('en-IN');
-const today=()=>new Date().toLocaleDateString('en-CA',{timeZone:'Asia/Kolkata'});
-const ERR={PIN_TAKEN:'Another branch already uses this PIN. Choose a different PIN.',PIN_FORMAT:'PIN must be 6 digits (numbers only).',NAME_EMPTY:'Enter a name.',NOT_ADMIN:'Please log in again.'};
-const errText=e=>{const m=(e&&e.message)||'';for(const k in ERR)if(m.includes(k))return ERR[k];if(m.includes('duplicate')&&m.includes('name'))return 'A branch with this name already exists.';return 'Problem: '+m};
-
-$('brand').textContent=C.BRAND||'Atlas Maharani';
-const configured=C.SUPABASE_URL&&!C.SUPABASE_URL.includes('YOUR-PROJECT')&&C.SUPABASE_ANON_KEY&&!C.SUPABASE_ANON_KEY.includes('PASTE')&&window.supabase;
-const sb=configured?window.supabase.createClient(C.SUPABASE_URL,C.SUPABASE_ANON_KEY):null;
-let branches=[],prizes=[];
+const {$, esc, sb, configured, fmtD, fmtDT, rupee, num, today, TYPES, store, errText, applyBrand, resizeImage, printSlip, kv} = App;
+let branches = [], items = [], prizes = [], camp = {}, brand = '@less fashion';
+const locName = id => id == null || id === '' ? 'Head Office' : ((branches.find(b => b.id === Number(id)) || {}).name || '#' + id);
+const brName = id => (branches.find(b => b.id === id) || {}).name || '';
 
 function view(v){
-  ['login','dash','camp','prizes','branches','log','config'].forEach(x=>{$('v-'+x).hidden=x!==v});
-  document.querySelectorAll('#tabs button').forEach(b=>b.setAttribute('aria-selected',b.dataset.v===v));
-  ({dash:loadDash,camp:loadCamp,prizes:loadPrizes,branches:loadBranches,log:loadLog})[v]?.();
+  ['login','dash','stock','closings','prizes','branches','camp','log','config'].forEach(x => { $('v-'+x).hidden = x !== v; });
+  document.querySelectorAll('#tabs button').forEach(b => b.setAttribute('aria-selected', b.dataset.v === v));
+  ({dash:loadDash, stock:loadStock, closings:loadClosings, prizes:loadPrizes, branches:loadBranches, camp:loadCamp, log:loadLog})[v]?.();
 }
-document.querySelectorAll('#tabs button').forEach(b=>b.addEventListener('click',()=>view(b.dataset.v)));
+document.querySelectorAll('#tabs button').forEach(b => b.addEventListener('click', () => view(b.dataset.v)));
 
 async function boot(){
-  if(!configured){view('config');return}
-  const {data:{session}}=await sb.auth.getSession();
-  if(!session){$('who').hidden=true;$('tabs').hidden=true;view('login');return}
-  $('who').hidden=false;$('tabs').hidden=false;$('meLbl').textContent=session.user.email;
-  await loadBranchList();view('dash');
+  if (!configured) { view('config'); return; }
+  const {data: {session}} = await sb.auth.getSession();
+  if (!session) { $('who').hidden = true; $('tabs').hidden = true; view('login'); return; }
+  $('who').hidden = false; $('tabs').hidden = false; $('meLbl').textContent = session.user.email;
+  await Promise.all([loadBranchList(), loadItems(), loadCampData()]);
+  view('dash');
 }
-$('loginForm').addEventListener('submit',async e=>{
-  e.preventDefault();$('loginErr').textContent='';
-  const {error}=await sb.auth.signInWithPassword({email:$('email').value.trim(),password:$('pass').value});
-  if(error){const m=error.message||'';
-    $('loginErr').textContent=/confirm/i.test(m)?'This user is not confirmed. Confirm it in Supabase → Authentication → Users. ('+m+')'
-      :/invalid login/i.test(m)?'Wrong email or password. ('+m+')'
-      :/api key|apikey|jwt/i.test(m)?'Supabase key is wrong. Check SUPABASE_ANON_KEY and redeploy. ('+m+')'
-      :/fetch|network/i.test(m)?'Cannot connect to Supabase. Check SUPABASE_URL and whether the project is paused. ('+m+')'
-      :'Login failed: '+m;return}
-  $('pass').value='';boot();
+$('loginForm').addEventListener('submit', async e => {
+  e.preventDefault(); $('loginErr').textContent = '';
+  const {error} = await sb.auth.signInWithPassword({email: $('email').value.trim(), password: $('pass').value});
+  if (error) { const m = error.message || '';
+    $('loginErr').textContent = /confirm/i.test(m) ? 'This user is not confirmed. Confirm it in Supabase → Authentication → Users.'
+      : /invalid login/i.test(m) ? 'Wrong email or password.' : /fetch|network/i.test(m) ? 'Cannot connect to Supabase. Check the URL in config.js and that the project is not paused.' : 'Login failed: ' + m;
+    return; }
+  $('pass').value = ''; boot();
 });
-$('logout').addEventListener('click',async()=>{await sb.auth.signOut();boot()});
+$('logout').addEventListener('click', async () => { await sb.auth.signOut(); boot(); });
 
 async function loadBranchList(){
-  const {data}=await sb.from('branches').select('id,name,active').order('name');branches=data||[];
-  $('qBr').innerHTML='<option value="">All branches</option>'+branches.map(b=>`<option value="${b.id}">${esc(b.name)}</option>`).join('');
+  const {data} = await sb.from('branches').select('id,name,active').order('name'); branches = data || [];
+  $('qBr').innerHTML = '<option value="">All branches</option>' + branches.map(b => `<option value="${b.id}">${esc(b.name)}</option>`).join('');
+  const locOpts = '<option value="">Head Office</option>' + branches.filter(b => b.active).map(b => `<option value="${b.id}">${esc(b.name)}</option>`).join('');
+  ['inLoc','trFrom','trTo'].forEach(id => { const keep = $(id).value; $(id).innerHTML = locOpts; $(id).value = keep; });
+  if ($('trTo').value === '' && branches.some(b => b.active)) $('trTo').value = String(branches.find(b => b.active).id);
+  $('mvLoc').innerHTML = '<option value="all">All locations</option>' + locOpts;
 }
-const brName=id=>(branches.find(b=>b.id===id)||{}).name||'';
+async function loadItems(){
+  const {data} = await sb.from('items').select('*').order('name'); items = data || [];
+  const opts = items.filter(i => i.active).map(i => `<option value="${i.id}">${esc(i.name)}</option>`).join('');
+  ['inItem','trItem'].forEach(id => { const keep = $(id).value; $(id).innerHTML = opts || '<option value="">Add an item first</option>'; if (keep) $(id).value = keep; });
+  $('mvItem').innerHTML = '<option value="">All items</option>' + items.map(i => `<option value="${i.id}">${esc(i.name)}</option>`).join('');
+}
+async function loadCampData(){
+  const {data} = await sb.from('campaign').select('*').eq('id', 1).single();
+  camp = data || {}; brand = applyBrand(camp); store.set('brand', {brand_name: camp.brand_name, logo: camp.logo, color: camp.color, accent: camp.accent});
+}
+applyBrand(store.get('brand') || {});
 
 /* ---------- dashboard ---------- */
-const d0=today();$('dTo').value=d0;$('dFrom').value=d0.slice(0,8)+'01';
-$('dGo').addEventListener('click',loadDash);
+const d0 = today(); $('dTo').value = d0; $('dFrom').value = d0.slice(0, 8) + '01';
+$('dGo').addEventListener('click', loadDash);
 async function loadDash(){
-  const {data:s,error}=await sb.rpc('admin_stats',{p_from:$('dFrom').value,p_to:$('dTo').value});
-  if(error){$('kpis').innerHTML=`<p class="err">${esc(errText(error))}</p>`;return}
-  $('kpis').innerHTML=[[s.today,"Today's scratches"],[s.total,'In this period'],[s.total?Math.round(s.used/s.total*100)+'%':'0%','Coupons redeemed'],[s.customers,'Customer numbers'],[s.gifts,'Gifts / bumpers'],[rupee(s.bill_total),'Bill amount']]
-    .map(([v,l])=>`<div class="kpi"><div class="big">${esc(v)}</div><span>${l}</span></div>`).join('');
-  $('brTable').innerHTML=`<thead><tr><th>Branch</th><th class="n">Today</th><th class="n">Total</th><th class="n">Gifts</th><th class="n">Bumper</th><th class="n">Redeemed</th><th class="n">Bill amount</th></tr></thead><tbody>`+
-    (s.branches.length?s.branches.map(b=>`<tr><td>${esc(b.name)}</td><td class="n">${b.today}</td><td class="n">${b.total}</td><td class="n">${b.gifts}</td><td class="n">${b.bumpers}</td><td class="n">${b.redeemed}</td><td class="n">${rupee(b.bill_total)}</td></tr>`).join('')
-    :'<tr><td colspan="7">No branches yet. Add them in the "Branches" tab.</td></tr>')+'</tbody>';
+  const {data: s, error} = await sb.rpc('admin_stats', {p_from: $('dFrom').value, p_to: $('dTo').value});
+  if (error) { $('kpis').innerHTML = `<p class="err">${esc(errText(error))}</p>`; return; }
+  $('kpis').innerHTML = [[num(s.today), "Today's scratches"], [num(s.total), 'In this period'], [s.total ? Math.round(s.used / s.total * 100) + '%' : '0%', 'Coupons redeemed'], [num(s.customers), 'Customer numbers'], [num(s.gifts), 'Gifts / bumpers'], [rupee(s.bill_total), 'Bill amount']]
+    .map(([v, l]) => `<div class="kpi"><div class="big">${esc(v)}</div><span>${l}</span></div>`).join('');
+  $('brTable').innerHTML = `<thead><tr><th>Branch</th><th class="n">Today</th><th class="n">Total</th><th class="n">Gifts</th><th class="n">Bumper</th><th class="n">Redeemed</th><th class="n">Bill amount</th></tr></thead><tbody>` +
+    (s.branches.length ? s.branches.map(b => `<tr><td>${esc(b.name)}</td><td class="n">${num(b.today)}</td><td class="n">${num(b.total)}</td><td class="n">${num(b.gifts)}</td><td class="n">${num(b.bumpers)}</td><td class="n">${num(b.redeemed)}</td><td class="n">${rupee(b.bill_total)}</td></tr>`).join('')
+    : '<tr><td colspan="7">No branches yet. Add them in the "Branches" tab.</td></tr>') + '</tbody>';
 }
-$('csv').addEventListener('click',async()=>{
-  $('csvMsg').textContent='Fetching data…';let rows=[],from=0;
-  while(true){
-    const {data,error}=await sb.from('scratches').select('*').gte('day',$('dFrom').value).lte('day',$('dTo').value).order('id').range(from,from+999);
-    if(error){$('csvMsg').textContent=errText(error);return}
-    rows=rows.concat(data);if(data.length<1000)break;from+=1000;
+$('csv').addEventListener('click', async () => {
+  $('csvMsg').textContent = 'Fetching data…'; let rows = [], from = 0;
+  while (true) {
+    const {data, error} = await sb.from('scratches').select('*').gte('day', $('dFrom').value).lte('day', $('dTo').value).order('id').range(from, from + 999);
+    if (error) { $('csvMsg').textContent = errText(error); return; }
+    rows = rows.concat(data); if (data.length < 1000) break; from += 1000;
   }
-  const q=v=>'"'+String(v??'').replace(/"/g,'""')+'"';
-  const csv='﻿'+['Date,Time,Branch,Bill No,Amount,Customer,Mobile,Prize,Type,Code,Expiry,Status,Used Branch,Used On']
-    .concat(rows.map(s=>[s.day,new Date(s.created_at).toLocaleTimeString('en-IN',{timeZone:'Asia/Kolkata'}),brName(s.branch_id),s.bill_no,s.amount,s.customer_name,s.mobile,s.prize_name,s.prize_type,s.code,s.expires_on,s.status,brName(s.used_branch_id),s.used_at?String(s.used_at).slice(0,10):''].map(q).join(','))).join('\r\n');
-  const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv;charset=utf-8'}));
-  a.download=`scratch-win_${$('dFrom').value}_to_${$('dTo').value}.csv`;document.body.appendChild(a);a.click();a.remove();
-  $('csvMsg').textContent=`${rows.length} rows downloaded.`;
+  const q = v => '"' + String(v ?? '').replace(/"/g, '""') + '"';
+  const csv = '﻿' + ['Date,Time,Branch,Bill No,Amount,Customer,Mobile,Prize,Type,Code,Expiry,Status,Used Branch,Used On']
+    .concat(rows.map(s => [s.day, new Date(s.created_at).toLocaleTimeString('en-IN', {timeZone:'Asia/Kolkata'}), brName(s.branch_id), s.bill_no, s.amount, s.customer_name, s.mobile, s.prize_name, s.prize_type, s.code, s.expires_on, s.status, brName(s.used_branch_id), s.used_at ? String(s.used_at).slice(0, 10) : ''].map(q).join(','))).join('\r\n');
+  const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([csv], {type: 'text/csv;charset=utf-8'}));
+  a.download = `scratch-win_${$('dFrom').value}_to_${$('dTo').value}.csv`; document.body.appendChild(a); a.click(); a.remove();
+  $('csvMsg').textContent = `${rows.length} rows downloaded.`;
 });
 
-/* ---------- campaign ---------- */
-async function loadCamp(){
-  const {data:c}=await sb.from('campaign').select('*').eq('id',1).single();if(!c)return;
-  $('cName').value=c.name;$('cMin').value=c.min_bill;$('cVal').value=c.validity_days;$('cStart').value=c.start_date||'';$('cEnd').value=c.end_date||'';
-  $('cOnce').value=c.once_per_day?'1':'0';$('cActive').value=c.active?'1':'0';$('campMsg').textContent='';
+/* ---------- stock ---------- */
+$('paper').value = store.get('paper') || '80'; $('paper').addEventListener('change', () => store.set('paper', $('paper').value));
+let stockMap = {}, pendMap = {};
+const sk = (i, b) => i + ':' + (b ?? 'ho');
+async function loadStock(){
+  await Promise.all([loadBranchList(), loadItems()]);
+  const {data, error} = await sb.rpc('admin_stock_summary');
+  if (error) { $('stMatrix').innerHTML = `<tr><td class="err">${esc(errText(error))}</td></tr>`; return; }
+  stockMap = {}; pendMap = {};
+  data.stock.forEach(r => stockMap[sk(r.item_id, r.branch_id)] = Number(r.qty));
+  data.pending.forEach(r => pendMap[sk(r.item_id, r.branch_id)] = Number(r.qty));
+  const locs = [{id: null, name: 'Head Office'}].concat(branches.filter(b => b.active));
+  $('stMatrix').innerHTML = `<thead><tr><th>Item</th>${locs.map(l => `<th class="n">${esc(l.name)}</th>`).join('')}<th class="n">Total</th></tr></thead><tbody>` +
+    (items.length ? items.filter(i => i.active).map(i => { let tot = 0;
+      return `<tr><td>${esc(i.name)}</td>${locs.map(l => { const q = stockMap[sk(i.id, l.id)] || 0, p = pendMap[sk(i.id, l.id)] || 0; tot += q;
+        return `<td class="n ${q < 0 ? 'neg' : ''}">${num(q)}${p ? ` <span class="pill w" title="won, not collected">${num(p)}</span>` : ''}</td>`; }).join('')}<td class="n b">${num(tot)}</td></tr>`; }).join('')
+    : `<tr><td colspan="${locs.length + 2}">No stock items yet. Add one below.</td></tr>`) + '</tbody>';
+  showAvail(); loadItemTable(); loadMoves();
 }
-$('campForm').addEventListener('submit',async e=>{
-  e.preventDefault();
-  const row={name:$('cName').value.trim()||'Scratch & Win',min_bill:Math.max(0,Number($('cMin').value)||0),validity_days:Math.max(1,Number($('cVal').value)||30),
-    start_date:$('cStart').value||null,end_date:$('cEnd').value||null,once_per_day:$('cOnce').value==='1',active:$('cActive').value==='1'};
-  const {error}=await sb.from('campaign').update(row).eq('id',1);
-  $('campMsg').className=error?'err':'okmsg';$('campMsg').textContent=error?errText(error):'Saved. Tablets will pick up the new settings the next time they open.';
+$('stRefresh').addEventListener('click', loadStock);
+function showAvail(){ const i = $('trItem').value; if (!i) { $('trAvail').textContent = ''; return; }
+  $('trAvail').textContent = `Available at ${locName($('trFrom').value)}: ${num(stockMap[sk(i, $('trFrom').value === '' ? null : Number($('trFrom').value))] || 0)}`; }
+['trItem','trFrom'].forEach(id => $(id).addEventListener('change', showAvail));
+const locVal = v => v === '' ? null : Number(v);
+$('inForm').addEventListener('submit', async e => {
+  e.preventDefault(); const m = $('inMsg'); m.className = 'err';
+  if (!$('inItem').value) { m.textContent = 'Add a stock item first.'; return; }
+  const {data, error} = await sb.rpc('admin_stock_in', {p_item: Number($('inItem').value), p_branch: locVal($('inLoc').value), p_qty: Number($('inQty').value), p_note: $('inNote').value});
+  if (error) { m.textContent = errText(error); return; }
+  m.className = 'okmsg'; m.textContent = `Added. Stock now ${num(data.stock)} at ${locName($('inLoc').value)}.`; $('inQty').value = ''; $('inNote').value = ''; loadStock();
+});
+$('trForm').addEventListener('submit', async e => {
+  e.preventDefault(); const m = $('trMsg'); m.className = 'err';
+  const item = items.find(i => i.id === Number($('trItem').value)); if (!item) { m.textContent = 'Add a stock item first.'; return; }
+  const qty = Number($('trQty').value), from = locVal($('trFrom').value), to = locVal($('trTo').value), note = $('trNote').value;
+  const {data, error} = await sb.rpc('admin_transfer', {p_item: item.id, p_from: from, p_to: to, p_qty: qty, p_note: note});
+  if (error) { m.textContent = errText(error); return; }
+  m.className = 'okmsg'; m.textContent = `Transferred. Ref ${data.ref}.`;
+  printSlip(`${camp.logo ? `<img src="${camp.logo}" alt="">` : ''}<div class="c l">${esc(brand)}</div><div class="c b">STOCK TRANSFER</div><div class="c">${esc(data.ref)}</div><div class="c">${fmtDT(new Date())}</div><hr>
+    ${kv('From', locName(from))}${kv('To', locName(to))}<hr>${kv('Item', item.name)}<div class="c xl">${num(qty)} ${esc(item.unit)}</div>${note ? `<div>Note: ${esc(note)}</div>` : ''}<hr>
+    <br><div>Sent by: ____________</div><br><div>Received by: ____________</div>`);
+  $('trQty').value = ''; $('trNote').value = ''; loadStock();
+});
+function loadItemTable(){
+  $('itTable').innerHTML = `<thead><tr><th>Item</th><th>Unit</th><th>On/Off</th></tr></thead><tbody>` +
+    (items.length ? items.map(i => `<tr><td><input data-it="${i.id}" data-k="name" value="${esc(i.name)}" aria-label="Item name"></td><td><input data-it="${i.id}" data-k="unit" value="${esc(i.unit)}" style="width:100px" aria-label="Unit"></td>
+      <td><select data-it="${i.id}" data-k="active" aria-label="On/Off"><option value="1"${i.active ? ' selected' : ''}>On</option><option value="0"${i.active ? '' : ' selected'}>Off</option></select></td></tr>`).join('')
+    : '<tr><td colspan="3">No items yet.</td></tr>') + '</tbody>';
+}
+$('itTable').addEventListener('change', async e => {
+  const t = e.target, id = t.dataset.it, k = t.dataset.k; if (!id) return;
+  const v = k === 'active' ? t.value === '1' : (t.value.trim() || (k === 'unit' ? 'pcs' : 'Item'));
+  const {error} = await sb.from('items').update({[k]: v}).eq('id', id);
+  $('itMsg').textContent = error ? errText(error) : ''; if (!error) loadStock();
+});
+$('itForm').addEventListener('submit', async e => {
+  e.preventDefault(); const name = $('itName').value.trim(); if (!name) { $('itMsg').textContent = 'Enter an item name.'; return; }
+  const {error} = await sb.from('items').insert({name, unit: $('itUnit').value.trim() || 'pcs'});
+  if (error) { $('itMsg').textContent = errText(error); return; }
+  $('itMsg').textContent = ''; $('itName').value = ''; loadStock();
+});
+const KIND = {in: 'Stock in', transfer_in: 'Transfer in', transfer_out: 'Transfer out', issue: 'Given to customer', adjust: 'Closing adjustment'};
+$('mvGo').addEventListener('click', loadMoves);
+async function loadMoves(){
+  let q = sb.from('stock_moves').select('*').order('id', {ascending: false}).limit(200);
+  if ($('mvItem').value) q = q.eq('item_id', $('mvItem').value);
+  const l = $('mvLoc').value; if (l === '') q = q.is('branch_id', null); else if (l !== 'all') q = q.eq('branch_id', l);
+  const {data, error} = await q;
+  if (error) { $('mvTable').innerHTML = `<tr><td class="err">${esc(errText(error))}</td></tr>`; return; }
+  const iname = id => (items.find(i => i.id === id) || {}).name || '';
+  $('mvTable').innerHTML = `<thead><tr><th>Date</th><th>Location</th><th>Item</th><th>Type</th><th class="n">Qty</th><th>Ref / note</th><th>By</th></tr></thead><tbody>` +
+    (data.length ? data.map(m => `<tr><td>${fmtDT(m.created_at)}</td><td>${esc(locName(m.branch_id))}</td><td>${esc(iname(m.item_id))}</td><td>${KIND[m.kind] || esc(m.kind)}</td>
+      <td class="n ${m.qty < 0 ? 'neg' : 'pos'}">${m.qty > 0 ? '+' : ''}${num(m.qty)}</td><td>${esc([m.ref, m.note].filter(Boolean).join(' · '))}</td><td>${esc(m.by_user || '')}</td></tr>`).join('')
+    : '<tr><td colspan="7">No movements.</td></tr>') + '</tbody>';
+}
+
+/* ---------- day closings ---------- */
+$('cdDay').value = today(); $('cdDay').max = today();
+$('cdGo').addEventListener('click', loadClosings);
+async function loadClosings(){
+  await loadBranchList(); $('cdDetail').innerHTML = '';
+  const day = $('cdDay').value || today();
+  const {data, error} = await sb.from('closings').select('*').eq('day', day);
+  if (error) { $('cdTable').innerHTML = `<tr><td class="err">${esc(errText(error))}</td></tr>`; return; }
+  const by = {}; data.forEach(c => by[c.branch_id] = c);
+  $('cdTable').innerHTML = `<thead><tr><th>Branch</th><th>Status</th><th>Closed at</th><th class="n">Scratches</th><th class="n">Stock difference</th><th>Note</th></tr></thead><tbody>` +
+    branches.filter(b => b.active).map(b => { const c = by[b.id]; const diff = c ? c.lines.reduce((a, l) => a + Number(l.difference || 0), 0) : 0;
+      return `<tr class="click" data-b="${b.id}"><td>${esc(b.name)}</td><td>${c ? '<span class="pill ok">Closed</span>' : '<span class="pill bad">Not closed</span>'}</td><td>${c ? fmtDT(c.closed_at) : ''}</td>
+        <td class="n">${c ? num(c.summary.scratches) : ''}</td><td class="n ${diff < 0 ? 'neg' : diff > 0 ? 'pos' : ''}">${c ? (diff > 0 ? '+' : '') + num(diff) : ''}</td><td>${c ? esc(c.note || '') : ''}</td></tr>`; }).join('') + '</tbody>';
+}
+$('cdTable').addEventListener('click', async e => {
+  const tr = e.target.closest('tr[data-b]'); if (!tr) return;
+  const {data: d, error} = await sb.rpc('admin_closing', {p_branch: Number(tr.dataset.b), p_day: $('cdDay').value || today()});
+  if (error) { $('cdDetail').innerHTML = `<p class="err">${esc(errText(error))}</p>`; return; }
+  const closed = !!d.closed, lines = closed ? d.closed.lines : d.lines, s = closed ? d.closed.summary : d.summary;
+  $('cdDetail').innerHTML = `<div class="box"><div class="flex between"><h3>${esc(d.branch)} · ${fmtD(d.day)} ${closed ? '<span class="pill ok">Closed</span>' : '<span class="pill bad">Not closed – live figures</span>'}</h3><button class="btn dark sm" id="cdPrint" type="button">Print</button></div>
+    <p class="note">Scratches ${num(s.scratches)} · Bill amount ${rupee(s.bill_total)} · Vouchers won ${num(s.vouchers_won)} · Gifts won ${num(s.gifts_won)} · Redeemed here ${num(s.redeemed_here)}</p>
+    <div class="scroll"><table><thead><tr><th>Item</th><th class="n">Opening</th><th class="n">Received</th><th class="n">Given</th><th class="n">Sent out</th><th class="n">Adjusted</th><th class="n">System</th><th class="n">Physical</th><th class="n">Difference</th></tr></thead><tbody>
+    ${lines.map(l => `<tr><td>${esc(l.name)}</td><td class="n">${num(l.opening)}</td><td class="n">${num(l.received)}</td><td class="n">${num(l.issued)}</td><td class="n">${num(l.sent_out)}</td><td class="n">${num(l.adjusted)}</td><td class="n b">${num(l.closing)}</td><td class="n">${closed ? num(l.physical) : '–'}</td><td class="n ${l.difference < 0 ? 'neg' : l.difference > 0 ? 'pos' : ''}">${closed ? (l.difference > 0 ? '+' : '') + num(l.difference) : '–'}</td></tr>`).join('')}
+    </tbody></table></div></div>`;
+  $('cdPrint').addEventListener('click', () => printSlip(`${camp.logo ? `<img src="${camp.logo}" alt="">` : ''}<div class="c l">${esc(brand)}</div><div class="c b">DAY CLOSING${closed ? '' : ' (NOT CLOSED)'}</div><div class="c">${esc(d.branch)} · ${fmtD(d.day)}</div><hr>
+    ${kv('Scratches', num(s.scratches))}${kv('Bill amount', rupee(s.bill_total))}${kv('Gifts won', num(s.gifts_won))}${kv('Redeemed here', num(s.redeemed_here))}<hr>
+    <table><tr><th>Item</th><th class="r">Open</th><th class="r">In</th><th class="r">Out</th><th class="r">Sys</th><th class="r">Phy</th><th class="r">Diff</th></tr>
+    ${lines.map(l => `<tr><td>${esc(l.name)}</td><td class="r">${num(l.opening)}</td><td class="r">${num(l.received)}</td><td class="r">${num(Number(l.issued) + Number(l.sent_out))}</td><td class="r">${num(l.closing)}</td><td class="r">${closed ? num(l.physical) : '-'}</td><td class="r">${closed ? num(l.difference) : '-'}</td></tr>`).join('')}</table><hr>
+    ${closed ? kv('Closed at', fmtDT(d.closed.closed_at)) : ''}`));
 });
 
 /* ---------- prizes ---------- */
 async function loadPrizes(){
-  const [{data:p},{data:t}]=await Promise.all([
+  await loadItems();
+  const [{data: p}, {data: t}] = await Promise.all([
     sb.from('prizes').select('*').order('sort').order('id'),
-    sb.from('scratches').select('prize_id').eq('day',today()).limit(10000)]);
-  prizes=p||[];const given={};(t||[]).forEach(x=>{given[x.prize_id]=(given[x.prize_id]||0)+1});
-  const tot=prizes.filter(x=>x.active).reduce((a,x)=>a+Number(x.weight),0)||1;
-  $('pzTable').innerHTML=`<thead><tr><th>Prize</th><th>Type</th><th class="n">Weight</th><th class="n">Chance</th><th class="n">Limit/day</th><th class="n">Given today (all branches)</th><th>On/Off</th></tr></thead><tbody>`+
-    prizes.map(x=>`<tr><td><input data-id="${x.id}" data-k="name" value="${esc(x.name)}" aria-label="Prize"></td>
-     <td><select data-id="${x.id}" data-k="type" aria-label="Type">${Object.entries(TYPES).map(([k,v])=>`<option value="${k}"${k===x.type?' selected':''}>${v}</option>`).join('')}</select></td>
-     <td class="n"><input data-id="${x.id}" data-k="weight" type="number" min="0" step="0.5" value="${esc(x.weight)}" style="width:90px" aria-label="Weight"></td>
-     <td class="n">${x.active?(Number(x.weight)/tot*100).toFixed(1)+'%':'–'}</td>
-     <td class="n"><input data-id="${x.id}" data-k="daily_limit" type="number" min="0" value="${esc(x.daily_limit)}" style="width:90px" aria-label="Limit"></td>
-     <td class="n">${given[x.id]||0}</td>
-     <td><select data-id="${x.id}" data-k="active" aria-label="On/Off"><option value="1"${x.active?' selected':''}>On</option><option value="0"${x.active?'':' selected'}>Off</option></select></td></tr>`).join('')+'</tbody>';
-  $('pzWarn').textContent=prizes.some(x=>x.active&&Number(x.weight)>0&&!Number(x.daily_limit))?'':'At least one prize must be On with limit 0 (unlimited).';
+    sb.from('scratches').select('prize_id').eq('day', today()).limit(10000)]);
+  prizes = p || []; const given = {}; (t || []).forEach(x => { given[x.prize_id] = (given[x.prize_id] || 0) + 1; });
+  const tot = prizes.filter(x => x.active).reduce((a, x) => a + Number(x.weight), 0) || 1;
+  const itemOpts = sel => '<option value="">– none –</option>' + items.map(i => `<option value="${i.id}"${i.id === sel ? ' selected' : ''}>${esc(i.name)}</option>`).join('');
+  $('pzTable').innerHTML = `<thead><tr><th>Picture</th><th>Prize</th><th>Type</th><th>Stock item</th><th class="n">Weight</th><th class="n">Chance</th><th class="n">Limit/day</th><th class="n">Given today</th><th>On/Off</th></tr></thead><tbody>` +
+    prizes.map(x => `<tr><td><div class="flex" style="gap:6px">${x.image ? `<img class="thumb" src="${x.image}" alt="">` : '<span class="thumb"></span>'}<button class="btn ghost sm" type="button" data-img="${x.id}">${x.image ? 'Change' : 'Add'}</button>${x.image ? `<button class="btn ghost sm" type="button" data-noimg="${x.id}" aria-label="Remove picture">×</button>` : ''}</div></td>
+     <td><input data-id="${x.id}" data-k="name" value="${esc(x.name)}" aria-label="Prize"></td>
+     <td><select data-id="${x.id}" data-k="type" aria-label="Type">${Object.entries(TYPES).map(([k, v]) => `<option value="${k}"${k === x.type ? ' selected' : ''}>${v}</option>`).join('')}</select></td>
+     <td><select data-id="${x.id}" data-k="item_id" aria-label="Stock item">${itemOpts(x.item_id)}</select></td>
+     <td class="n"><input data-id="${x.id}" data-k="weight" type="number" min="0" step="0.5" value="${esc(x.weight)}" style="width:80px" aria-label="Weight"></td>
+     <td class="n">${x.active ? (Number(x.weight) / tot * 100).toFixed(1) + '%' : '–'}</td>
+     <td class="n"><input data-id="${x.id}" data-k="daily_limit" type="number" min="0" value="${esc(x.daily_limit)}" style="width:80px" aria-label="Limit"></td>
+     <td class="n">${num(given[x.id] || 0)}</td>
+     <td><select data-id="${x.id}" data-k="active" aria-label="On/Off"><option value="1"${x.active ? ' selected' : ''}>On</option><option value="0"${x.active ? '' : ' selected'}>Off</option></select></td></tr>`).join('') + '</tbody>';
+  $('pzWarn').textContent = prizes.some(x => x.active && Number(x.weight) > 0 && !Number(x.daily_limit) && !x.item_id) ? '' : 'At least one prize must be On with limit 0 and no stock item (e.g. a voucher), so there is always something to win.';
 }
-$('pzTable').addEventListener('change',async e=>{
-  const t=e.target,id=t.dataset.id,k=t.dataset.k;if(!id)return;
-  let v=t.value;if(k==='weight'||k==='daily_limit')v=Math.max(0,Number(v)||0);if(k==='active')v=v==='1';if(k==='name')v=v.trim()||'Prize';
-  const {error}=await sb.from('prizes').update({[k]:v}).eq('id',id);
-  if(error)$('pzWarn').textContent=errText(error);else loadPrizes();
+$('pzTable').addEventListener('change', async e => {
+  const t = e.target, id = t.dataset.id, k = t.dataset.k; if (!id) return;
+  let v = t.value; if (k === 'weight' || k === 'daily_limit') v = Math.max(0, Number(v) || 0); if (k === 'active') v = v === '1'; if (k === 'name') v = v.trim() || 'Prize'; if (k === 'item_id') v = v ? Number(v) : null;
+  const {error} = await sb.from('prizes').update({[k]: v}).eq('id', id);
+  if (error) $('pzWarn').textContent = errText(error); else loadPrizes();
 });
-$('addPz').addEventListener('click',async()=>{
-  const {error}=await sb.from('prizes').insert({name:'New prize',type:'gift',weight:1,daily_limit:5,sort:prizes.length+1});
-  if(error)$('pzWarn').textContent=errText(error);else loadPrizes();
+let imgFor = null;
+$('pzTable').addEventListener('click', async e => {
+  const a = e.target.dataset.img, r = e.target.dataset.noimg;
+  if (a) { imgFor = a; $('pzFile').value = ''; $('pzFile').click(); }
+  if (r) { const {error} = await sb.from('prizes').update({image: null}).eq('id', r); if (error) $('pzWarn').textContent = errText(error); else loadPrizes(); }
+});
+$('pzFile').addEventListener('change', async () => {
+  const f = $('pzFile').files[0]; if (!f || !imgFor) return;
+  try { const url = await resizeImage(f, 720, 480, 'image/jpeg');
+    const {error} = await sb.from('prizes').update({image: url}).eq('id', imgFor);
+    if (error) throw error; loadPrizes();
+  } catch (err) { $('pzWarn').textContent = errText(err); }
+});
+$('addPz').addEventListener('click', async () => {
+  const {error} = await sb.from('prizes').insert({name: 'New prize', type: 'gift', weight: 1, daily_limit: 5, sort: prizes.length + 1});
+  if (error) $('pzWarn').textContent = errText(error); else loadPrizes();
 });
 
 /* ---------- branches ---------- */
 async function loadBranches(){
   await loadBranchList();
-  $('brList').innerHTML=`<thead><tr><th>Branch</th><th>On/Off</th><th>New PIN (only to change)</th><th></th></tr></thead><tbody>`+
-    (branches.length?branches.map(b=>`<tr><td><input id="bn${b.id}" value="${esc(b.name)}" aria-label="Name"></td>
-      <td><select id="ba${b.id}" aria-label="On/Off"><option value="1"${b.active?' selected':''}>On</option><option value="0"${b.active?'':' selected'}>Off</option></select></td>
+  $('brList').innerHTML = `<thead><tr><th>Branch</th><th>On/Off</th><th>New PIN (only to change)</th><th></th></tr></thead><tbody>` +
+    (branches.length ? branches.map(b => `<tr><td><input id="bn${b.id}" value="${esc(b.name)}" aria-label="Name"></td>
+      <td><select id="ba${b.id}" aria-label="On/Off"><option value="1"${b.active ? ' selected' : ''}>On</option><option value="0"${b.active ? '' : ' selected'}>Off</option></select></td>
       <td><input id="bp${b.id}" inputmode="numeric" maxlength="6" placeholder="••••••" aria-label="New PIN"></td>
       <td><button class="btn sm" data-save="${b.id}" type="button">Save</button> <span class="note" id="bm${b.id}"></span></td></tr>`).join('')
-    :'<tr><td colspan="4">No branches yet. Add one below.</td></tr>')+'</tbody>';
+    : '<tr><td colspan="4">No branches yet. Add one below.</td></tr>') + '</tbody>';
 }
-$('brList').addEventListener('click',async e=>{
-  const id=e.target.dataset.save;if(!id)return;
-  const {error}=await sb.rpc('admin_save_branch',{p_id:Number(id),p_name:$('bn'+id).value,p_pin:$('bp'+id).value.trim()||null,p_active:$('ba'+id).value==='1'});
-  $('bm'+id).textContent=error?errText(error):'Saved';if(!error){$('bp'+id).value='';loadBranchList()}
+$('brList').addEventListener('click', async e => {
+  const id = e.target.dataset.save; if (!id) return;
+  const {error} = await sb.rpc('admin_save_branch', {p_id: Number(id), p_name: $('bn' + id).value, p_pin: $('bp' + id).value.trim() || null, p_active: $('ba' + id).value === '1'});
+  $('bm' + id).textContent = error ? errText(error) : 'Saved'; if (!error) { $('bp' + id).value = ''; loadBranchList(); }
 });
-$('brForm').addEventListener('submit',async e=>{
-  e.preventDefault();$('brErr').textContent='';
-  const {error}=await sb.rpc('admin_save_branch',{p_id:null,p_name:$('brName').value,p_pin:$('brPin').value.trim(),p_active:true});
-  if(error){$('brErr').textContent=errText(error);return}
-  $('brName').value='';$('brPin').value='';loadBranches();
+$('brForm').addEventListener('submit', async e => {
+  e.preventDefault(); $('brErr').textContent = '';
+  const {error} = await sb.rpc('admin_save_branch', {p_id: null, p_name: $('brName').value, p_pin: $('brPin').value.trim(), p_active: true});
+  if (error) { $('brErr').textContent = errText(error); return; }
+  $('brName').value = ''; $('brPin').value = ''; loadBranches();
+});
+
+/* ---------- campaign & branding ---------- */
+let newLogo;
+async function loadCamp(){
+  await loadCampData(); const c = camp; newLogo = undefined;
+  $('bName').value = c.brand_name || '@less fashion'; $('bColor').value = c.color || '#741233'; $('bAccent').value = c.accent || '#e2ad37'; $('bTerms').value = c.terms || '';
+  $('logoPrev').src = c.logo || ''; $('logoPrev').hidden = !c.logo; $('logoFile').value = '';
+  $('cName').value = c.name; $('cMin').value = c.min_bill; $('cVal').value = c.validity_days; $('cStart').value = c.start_date || ''; $('cEnd').value = c.end_date || '';
+  $('cOnce').value = c.once_per_day ? '1' : '0'; $('cActive').value = c.active ? '1' : '0'; $('campMsg').textContent = '';
+}
+$('logoFile').addEventListener('change', async () => {
+  const f = $('logoFile').files[0]; if (!f) return;
+  try { newLogo = await resizeImage(f, 400, 200, 'image/png'); $('logoPrev').src = newLogo; $('logoPrev').hidden = false; $('campMsg').className = 'note'; $('campMsg').textContent = 'Logo ready – press Save.'; }
+  catch (err) { $('campMsg').className = 'err'; $('campMsg').textContent = errText(err); }
+});
+$('logoDel').addEventListener('click', () => { newLogo = null; $('logoPrev').hidden = true; $('logoFile').value = ''; $('campMsg').className = 'note'; $('campMsg').textContent = 'Logo will be removed – press Save.'; });
+$('campForm').addEventListener('submit', async e => {
+  e.preventDefault();
+  const row = {brand_name: $('bName').value.trim() || '@less fashion', color: $('bColor').value, accent: $('bAccent').value, terms: $('bTerms').value.trim(),
+    name: $('cName').value.trim() || 'Scratch & Win', min_bill: Math.max(0, Number($('cMin').value) || 0), validity_days: Math.max(1, Number($('cVal').value) || 30),
+    start_date: $('cStart').value || null, end_date: $('cEnd').value || null, once_per_day: $('cOnce').value === '1', active: $('cActive').value === '1'};
+  if (newLogo !== undefined) row.logo = newLogo;
+  const {error} = await sb.from('campaign').update(row).eq('id', 1);
+  $('campMsg').className = error ? 'err' : 'okmsg';
+  $('campMsg').textContent = error ? errText(error) : 'Saved. Tablets pick up the new settings the next time they open the app.';
+  if (!error) { await loadCampData(); newLogo = undefined; }
 });
 
 /* ---------- log ---------- */
-$('logForm').addEventListener('submit',e=>{e.preventDefault();loadLog()});
+$('logForm').addEventListener('submit', e => { e.preventDefault(); loadLog(); });
 async function loadLog(){
-  let qr=sb.from('scratches').select('*').order('id',{ascending:false}).limit(100);
-  const q=$('q').value.replace(/[^A-Za-z0-9-]/g,'');
-  if(q)qr=qr.or(`code.ilike.%${q}%,mobile.ilike.%${q}%,bill_no.ilike.%${q}%`);
-  if($('qBr').value)qr=qr.eq('branch_id',$('qBr').value);
-  const {data,error}=await qr;
-  if(error){$('logTable').innerHTML=`<tr><td class="err">${esc(errText(error))}</td></tr>`;return}
-  const t=today();
-  $('logTable').innerHTML=`<thead><tr><th>Date</th><th>Branch</th><th>Bill</th><th class="n">Amount</th><th>Customer</th><th>Prize</th><th>Code</th><th>Status</th></tr></thead><tbody>`+
-    (data.length?data.map(s=>`<tr><td>${fmtD(s.day)}</td><td>${esc(brName(s.branch_id))}</td><td>${esc(s.bill_no)}</td><td class="n">${rupee(s.amount)}</td><td>${esc(s.customer_name)} · ${esc(s.mobile)}</td><td>${esc(s.prize_name)}</td><td>${esc(s.code)}</td><td>${s.status==='used'?'<span class="pill ok">Used</span>':s.expires_on<t?'<span class="pill bad">Expired</span>':'<span class="pill">New</span>'}</td></tr>`).join('')
-    :'<tr><td colspan="8">Nothing found.</td></tr>')+'</tbody>';
+  let qr = sb.from('scratches').select('*').order('id', {ascending: false}).limit(100);
+  const q = $('q').value.replace(/[^A-Za-z0-9-]/g, '');
+  if (q) qr = qr.or(`code.ilike.%${q}%,mobile.ilike.%${q}%,bill_no.ilike.%${q}%`);
+  if ($('qBr').value) qr = qr.eq('branch_id', $('qBr').value);
+  const {data, error} = await qr;
+  if (error) { $('logTable').innerHTML = `<tr><td class="err">${esc(errText(error))}</td></tr>`; return; }
+  const t = today();
+  $('logTable').innerHTML = `<thead><tr><th>Date</th><th>Branch</th><th>Bill</th><th class="n">Amount</th><th>Customer</th><th>Prize</th><th>Code</th><th>Status</th></tr></thead><tbody>` +
+    (data.length ? data.map(s => `<tr><td>${fmtD(s.day)}</td><td>${esc(brName(s.branch_id))}</td><td>${esc(s.bill_no)}</td><td class="n">${rupee(s.amount)}</td><td>${esc(s.customer_name)} · ${esc(s.mobile)}</td><td>${esc(s.prize_name)}</td><td>${esc(s.code)}</td><td>${s.status === 'used' ? '<span class="pill ok">Used</span>' : s.expires_on < t ? '<span class="pill bad">Expired</span>' : '<span class="pill">New</span>'}</td></tr>`).join('')
+    : '<tr><td colspan="8">Nothing found.</td></tr>') + '</tbody>';
 }
 
 boot();
