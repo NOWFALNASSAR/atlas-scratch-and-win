@@ -10,8 +10,9 @@
 <link rel="icon" href="/icon-192.png">
 <link rel="apple-touch-icon" href="/icon-192.png">
 <title>@less fashion – Scratch &amp; Win</title>
-<link href="https://fonts.googleapis.com/css2?family=Jost:wght@500;600;700&family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Jost:wght@500;600;700&family=Inter:wght@400;600;700&family=Mountains+of+Christmas:wght@700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="style.css">
+<link rel="stylesheet" href="xmas.css">
 </head>
 <body>
 <header>
@@ -24,11 +25,12 @@
     <button role="tab" data-v="redeem">Redeem coupon</button>
     <button role="tab" data-v="stock">Stock</button>
     <button role="tab" data-v="closing">Day closing</button>
-    <button role="tab" data-v="printer">Printer</button>
+    <button role="tab" data-v="printer">Settings</button>
   </nav>
 </header>
 <main>
 <section id="v-login" class="col" hidden>
+  <img id="loginArt" src="img/gift-box-tall.webp" alt="@less സമ്മാനപ്പെട്ടി">
   <h2>Branch login</h2>
   <p class="note">Enter the 6-digit branch PIN from Head Office. You only need to do this once on this tablet.</p>
   <form id="loginForm" novalidate>
@@ -41,6 +43,8 @@
 
 <section id="v-scratch" class="col" hidden>
   <form id="entry" novalidate>
+    <div id="heroRow"><img id="heroArt" src="img/gift-box.webp" alt="@less സമ്മാനപ്പെട്ടി"><img id="heroSanta" src="img/santa-standing.webp" alt="Christmas Pappaji"></div>
+    <div id="xmasBanner">Merry Christmas<small>Shop, scratch &amp; win gifts from Pappaji at <span data-brand>@less fashion</span></small></div>
     <h2>Bill details</h2>
     <div class="row2">
       <div><label for="fBill">Bill number</label><input id="fBill" autocomplete="off"></div>
@@ -101,6 +105,17 @@
 </section>
 
 <section id="v-printer" class="col" hidden>
+  <div class="card" style="margin-bottom:22px">
+    <h3>Change branch PIN</h3>
+    <p class="note">Branch manager only. After changing, use the new PIN on every tablet of this branch.</p>
+    <div class="row3">
+      <div><label for="pinOld">Current PIN</label><input id="pinOld" type="password" inputmode="numeric" maxlength="6" autocomplete="off"></div>
+      <div><label for="pinNew">New PIN</label><input id="pinNew" type="password" inputmode="numeric" maxlength="6" autocomplete="off"></div>
+      <div><label for="pinNew2">New PIN again</label><input id="pinNew2" type="password" inputmode="numeric" maxlength="6" autocomplete="off"></div>
+    </div>
+    <button class="btn w" id="pinSave" type="button">Change PIN</button>
+    <p class="err" id="pinMsg"></p>
+  </div>
   <h2>Printer</h2>
   <div class="row2">
     <div><label for="paper">Thermal paper width</label><select id="paper"><option value="80">80 mm</option><option value="58">58 mm</option></select></div>
@@ -123,6 +138,7 @@
 <script src="config.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
 <script src="common.js"></script>
+<script src="xmas.js"></script>
 <script>
 {
 const {$, esc, sb, configured, fmtD, fmtDT, rupee, num, today, TYPES, store, errText, applyBrand, printSlip, kv, confetti} = App;
@@ -144,14 +160,15 @@ function paintHeader(){
   $('minNote').textContent = `Only for bills of ${rupee(sess.min_bill)} and above. One scratch per bill.`;
   document.title = `${brand} – Scratch & Win`;
   loadLogo();
+  if (sess.theme === 'xmas') Xmas.enable(); else Xmas.disable();
 }
 function boot(){
   if (!configured) { view('config'); return; }
-  if (!sess) { applyBrand(store.get('brand') || {}); $('who').hidden = true; $('tabs').hidden = true; $('campLbl').textContent = ''; view('login'); $('pin').focus(); return; }
+  if (!sess) { const sb0 = store.get('brand') || {}; applyBrand(sb0); if (sb0.theme === 'xmas') Xmas.enable(); $('who').hidden = true; $('tabs').hidden = true; $('campLbl').textContent = ''; view('login'); $('pin').focus(); return; }
   $('who').hidden = false; $('tabs').hidden = false; paintHeader(); view('scratch');
   sb.rpc('branch_login', {p_pin: sess.pin}).then(({data, error}) => {
     if (error && String(error.message).includes('BRANCH_PIN')) { store.del('session'); sess = null; boot(); return; }
-    if (data) { sess = {pin: sess.pin, ...data}; store.set('session', sess); store.set('brand', {brand_name:data.brand_name, logo:data.logo, color:data.color, accent:data.accent}); paintHeader(); }
+    if (data) { sess = {pin: sess.pin, ...data}; store.set('session', sess); store.set('brand', {brand_name:data.brand_name, logo:data.logo, color:data.color, accent:data.accent, theme:data.theme}); paintHeader(); }
   });
 }
 $('loginForm').addEventListener('submit', async e => {
@@ -183,13 +200,14 @@ function startCard(data){
   cur = data;
   const p = (sess.prizes || []).find(x => x.id === cur.prize_id);
   const face = $('face');
+  face.style.visibility = 'hidden';   // never show the prize before the gold cover is drawn
   if (p && p.image) { face.className = 'face photo'; face.style.backgroundImage = `url("${p.image}")`; }
   else { face.className = 'face'; face.style.backgroundImage = ''; }
   $('entry').hidden = true; $('play').hidden = false; $('res').hidden = true; $('giveErr').textContent = '';
   $('hi').textContent = cur.card_no === 2 ? '2nd scratch card – scratch the gold card with your finger!' : 'Scratch the gold card with your finger!';
   $('pName').textContent = cur.prize; $('pType').textContent = TYPES[cur.type] || '';
   window.scrollTo({top: 0, behavior: 'smooth'});
-  requestAnimationFrame(paintFoil);
+  requestAnimationFrame(() => { paintFoil(); face.style.visibility = 'visible'; Xmas.santa(cur.card_no === 2 ? 'Ho ho ho! One more gift from Pappaji!' : 'Ho ho ho! Pappaji brought your gift!'); });
 }
 $('secGo').addEventListener('click', async () => {
   if ($('secPin').value.trim() !== sess.pin) { $('secErr').textContent = 'Wrong PIN. Only the branch manager can give a 2nd card.'; return; }
@@ -202,6 +220,8 @@ $('secGo').addEventListener('click', async () => {
 
 const cv = $('cv'), ctx = cv.getContext('2d', {willReadFrequently: true});
 let drawing = false, moves = 0, revealed = false, logoImg = null;
+const foilArt = new Image(); foilArt.src = 'img/gift-box-tall.webp'; foilArt.onload = () => { if (!$('play').hidden && !revealed) paintFoil(); };
+const winArt = new Image(); winArt.src = 'img/santa-box.webp'; const winArt2 = new Image(); winArt2.src = 'img/gift-box.webp';
 function paintFoil(){
   const r = cv.getBoundingClientRect(), dpr = devicePixelRatio || 1;
   cv.width = Math.round(r.width * dpr); cv.height = Math.round(r.height * dpr); cv.style.opacity = 1; revealed = false;
@@ -212,17 +232,26 @@ function paintFoil(){
   ctx.fillStyle = g; ctx.fillRect(0, 0, cv.width, cv.height);
   ctx.fillStyle = 'rgba(255,255,255,.18)';
   for (let x = -cv.height; x < cv.width; x += 26 * dpr) { ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x + cv.height, cv.height); ctx.lineTo(x + cv.height + 8 * dpr, cv.height); ctx.lineTo(x + 8 * dpr, 0); ctx.fill(); }
-  let y = cv.height / 2;
-  if (logoImg && logoImg.complete && logoImg.naturalWidth) {
+  let y = cv.height / 2, tx = cv.width / 2;
+  if (foilArt.complete && foilArt.naturalWidth) {   // @less gift box artwork on the left, text on the right
+    const h = cv.height * .9, w = h * foilArt.naturalWidth / foilArt.naturalHeight;
+    ctx.drawImage(foilArt, cv.width * .04, (cv.height - h) / 2, w, h); tx = cv.width * .04 + w + (cv.width - cv.width * .04 - w) / 2;
+  } else if (logoImg && logoImg.complete && logoImg.naturalWidth) {
     const h = cv.height * .26, w = Math.min(cv.width * .5, h * logoImg.naturalWidth / logoImg.naturalHeight);
     ctx.fillStyle = 'rgba(255,255,255,.9)'; ctx.fillRect((cv.width - w) / 2 - 8 * dpr, cv.height * .12 - 6 * dpr, w + 16 * dpr, h + 12 * dpr);
     ctx.drawImage(logoImg, (cv.width - w) / 2, cv.height * .12, w, h); y = cv.height * .62;
   }
+  if (Xmas.active) {   // snowflakes on the foil
+    ctx.fillStyle = 'rgba(255,255,255,.55)'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.font = `${Math.round(22 * dpr)}px sans-serif`;
+    for (let i = 0; i < 18; i++) ctx.fillText('❄', ((i * 137) % 100) / 100 * cv.width, ((i * 59) % 100) / 100 * cv.height);
+  }
   ctx.fillStyle = '#4a2a05'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-  ctx.font = `700 ${Math.round(Math.min(cv.width / 10, 40 * dpr))}px Jost,sans-serif`;
-  ctx.fillText('SCRATCH HERE', cv.width / 2, y - 6 * dpr);
-  ctx.font = `600 ${Math.round(16 * dpr)}px Inter,sans-serif`;
-  ctx.fillText(brand + ' · Scratch & Win', cv.width / 2, y + 30 * dpr);
+  const big = tx !== cv.width / 2 ? Math.min(cv.width / 15, 34 * dpr) : Math.min(cv.width / 10, 40 * dpr);
+  ctx.font = `700 ${Math.round(big)}px Jost,sans-serif`;
+  if (tx !== cv.width / 2) { ctx.fillText('SCRATCH', tx, y - big * .75); ctx.fillText('HERE', tx, y + big * .3); y += big * .55; }
+  else ctx.fillText('SCRATCH HERE', tx, y - 6 * dpr);
+  ctx.font = `600 ${Math.round(Math.min(15 * dpr, cv.width / 34))}px Inter,sans-serif`;
+  ctx.fillText(Xmas.active ? 'Merry Christmas!' : brand, tx, y + 30 * dpr);
 }
 function loadLogo(){ if (sess && sess.logo) { logoImg = new Image(); logoImg.src = sess.logo; } }
 function cleared(){ const d = ctx.getImageData(0, 0, cv.width, cv.height).data; let c = 0, n = 0; for (let i = 3; i < d.length; i += 160) { n++; if (d[i] < 20) c++; } return c / n; }
@@ -237,7 +266,7 @@ cv.addEventListener('pointermove', e => { if (drawing && !revealed) scratchAt(e)
 ['pointerup','pointercancel'].forEach(t => cv.addEventListener(t, () => { drawing = false; if (!revealed && cleared() > .45) reveal(); }));
 $('revealAll').addEventListener('click', reveal);
 function reveal(){
-  if (revealed || !cur) return; revealed = true; cv.style.opacity = 0; setTimeout(() => ctx.clearRect(0, 0, cv.width, cv.height), 650); confetti();
+  if (revealed || !cur) return; revealed = true; cv.style.opacity = 0; winPop(); setTimeout(() => ctx.clearRect(0, 0, cv.width, cv.height), 650); confetti();
   $('rType').textContent = TYPES[cur.type] || ''; $('rCode').textContent = cur.code; $('rExp').textContent = `Valid till ${fmtD(cur.expires_on)}`;
   const how = cur.type === 'voucher' ? 'Show this code on your next purchase.' : 'Show this code at the shop counter to collect your gift.';
   const msg = `Hi,\nCongratulations! You won ${cur.prize} in the ${brand} ${cur.campaign} Scratch & Win!\nCoupon code: ${cur.code}\n${how}\nValid till ${fmtD(cur.expires_on)}.\nThank you, visit again! – ${brand}, ${cur.branch}`;
@@ -247,6 +276,13 @@ function reveal(){
   $('second').hidden = !cur.second_allowed; $('secPin').value = ''; $('secErr').textContent = '';
   $('res').hidden = false;
   if (store.get('autoPrint') === '1') printCoupon();
+}
+function winPop(){
+  if (matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+  const art = Xmas.active ? winArt : winArt2; if (!art.complete || !art.naturalWidth) return;
+  document.getElementById('winPop')?.remove();
+  const im = document.createElement('img'); im.id = 'winPop'; im.src = art.src; im.alt = ''; document.body.appendChild(im);
+  setTimeout(() => im.remove(), 2900);
 }
 function printCoupon(){
   if (!cur) return;
@@ -363,6 +399,19 @@ function printClosing(){
     ${closed ? kv('Closed at', fmtDT(d.closed.closed_at)) : ''}${closed && d.closed.note ? `<div>Note: ${esc(d.closed.note)}</div>` : ''}
     <br><div>Branch manager: ____________</div><br><div>Signature: ____________</div>`);
 }
+
+/* ---------- change branch PIN ---------- */
+$('pinSave').addEventListener('click', async () => {
+  const m = $('pinMsg'); m.className = 'err';
+  const o = $('pinOld').value.trim(), n = $('pinNew').value.trim();
+  if (!/^\d{6}$/.test(n)) { m.textContent = 'New PIN must be 6 digits.'; return; }
+  if (n !== $('pinNew2').value.trim()) { m.textContent = 'The two new PINs do not match.'; return; }
+  const {error} = await sb.rpc('change_branch_pin', {p_pin: o, p_new_pin: n});
+  if (error) { m.textContent = errText(error); return; }
+  sess.pin = n; store.set('session', sess);
+  ['pinOld','pinNew','pinNew2'].forEach(i => $(i).value = '');
+  m.className = 'okmsg'; m.textContent = 'PIN changed. Other tablets of this branch must log in again with the new PIN.';
+});
 
 /* ---------- printer settings ---------- */
 $('paper').value = store.get('paper') || '80'; $('autoPrint').value = store.get('autoPrint') || '0';

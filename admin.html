@@ -15,7 +15,7 @@
 <header>
   <div class="top">
     <div class="brand"><img data-logo alt="" hidden><div><h1><span data-brand>@less fashion</span> · <b>Scratch &amp; Win</b></h1><small>Head Office</small></div></div>
-    <div class="who" id="who" hidden><span id="meLbl"></span><button id="logout" type="button">Logout</button></div>
+    <div class="who" id="who" hidden><span id="meLbl"></span><button id="myPass" type="button">My password</button><button id="logout" type="button">Logout</button></div>
   </div>
   <nav role="tablist" id="tabs" hidden>
     <button role="tab" data-v="dash" aria-selected="true">Dashboard</button>
@@ -25,7 +25,9 @@
     <button role="tab" data-v="branches">Branches</button>
     <button role="tab" data-v="camp">Campaign &amp; branding</button>
     <button role="tab" data-v="log">Scratch log</button>
+    <button role="tab" data-v="reports">Reports</button>
     <button role="tab" data-v="users">Users</button>
+    <button role="tab" data-v="me" hidden>My password</button>
   </nav>
 </header>
 <main>
@@ -166,6 +168,7 @@
       <div><label for="cEnd">End date</label><input id="cEnd" type="date"></div>
       <div><label for="cOnce">One scratch per mobile per day</label><select id="cOnce"><option value="1">Yes</option><option value="0">No</option></select></div>
       <div><label for="cSecond">2nd scratch card for bills from ₹ (empty = off)</label><input id="cSecond" type="number" min="0" placeholder="e.g. 5000"></div>
+      <div><label for="cTheme">Tablet theme</label><select id="cTheme"><option value="normal">Normal</option><option value="xmas">Christmas (Pappaji, snow, lights)</option></select></div>
       <div><label for="cActive">Offer on / off</label><select id="cActive"><option value="1">On</option><option value="0">Off</option></select></div>
     </div>
     <p class="note">If dates are left empty, the offer runs every day while it is On.</p>
@@ -186,28 +189,54 @@
   <table class="stack" id="logTable"></table>
 </section>
 
+<!-- Reports -->
+<section id="v-reports" hidden>
+  <h2>Inventory reports</h2>
+  <div class="card">
+    <div class="flex">
+      <label for="rpFrom" style="margin:0">From</label><input id="rpFrom" type="date" style="width:auto">
+      <label for="rpTo" style="margin:0">To</label><input id="rpTo" type="date" style="width:auto">
+      <button class="btn sm" id="rpMake" type="button">Make report</button>
+    </div>
+    <p class="note" style="margin:8px 0 0">Shows opening stock, purchases, stock sent to each branch, gifts given, closing adjustments and closing stock with value for the chosen dates.</p>
+  </div>
+  <div id="rpOut"></div>
+  <div class="box"><h3>Submitted to management</h3><table class="stack" id="rpList"></table></div>
+</section>
+
+<!-- My password -->
+<section id="v-me" class="col" hidden>
+  <h2>Change my password</h2>
+  <form id="meForm" novalidate>
+    <label for="meNew">New password (at least 6 characters)</label><input id="meNew" type="password" autocomplete="new-password">
+    <label for="meNew2">Type it again</label><input id="meNew2" type="password" autocomplete="new-password">
+    <button class="btn w" type="submit">Change password</button>
+    <p class="err" id="meMsg"></p>
+  </form>
+</section>
+
 <!-- Users -->
 <section id="v-users" hidden>
   <h2>Head Office users</h2>
-  <div class="card" style="margin-bottom:16px">
-    <p class="note" style="margin:0"><b>To add a person:</b> 1) In Supabase → Authentication → Users → <b>Add user</b>, create their login (email + password, tick Auto Confirm). 2) Add the same email here and choose the role. They can then log in at this admin page.</p>
-  </div>
-  <table class="stack" id="usTable"></table>
-  <div class="box"><h3>Add user</h3>
+  <div class="box" style="margin-top:0;border:0;padding-top:0"><h3>Add user</h3>
     <form id="usForm" class="flex" novalidate>
-      <input id="usEmail" type="email" placeholder="Email" style="flex:2 1 220px">
-      <input id="usName" placeholder="Name" style="flex:1 1 150px">
+      <input id="usEmail" type="email" placeholder="Email (their login)" style="flex:2 1 220px" autocomplete="off">
+      <input id="usName" placeholder="Name" style="flex:1 1 150px" autocomplete="off">
       <select id="usRole" style="flex:1 1 160px" aria-label="Role"></select>
-      <button class="btn sm" type="submit">Add</button>
+      <input id="usPass" type="text" placeholder="Password (min 6)" style="flex:1 1 160px" autocomplete="off">
+      <button class="btn sm" type="submit">Create login</button>
     </form>
     <p class="err" id="usErr"></p>
+    <p class="note">The login is ready at once. Give the person the admin page link, their email and this password; they can change the password later from "My password".</p>
   </div>
+  <table class="stack" id="usTable"></table>
   <div class="box"><h3>What each role can do</h3>
     <table><thead><tr><th>Role</th><th>Can see</th><th>Can change</th></tr></thead><tbody>
-      <tr><td><b>Admin</b></td><td>Everything</td><td>Everything</td></tr>
-      <tr><td><b>Marketing</b></td><td>Dashboard, Stock, Prizes, Campaign &amp; branding, Scratch log</td><td>Prizes, Campaign &amp; branding</td></tr>
-      <tr><td><b>Sales Manager</b></td><td>Dashboard, Stock, Day closings, Prizes, Scratch log</td><td>Nothing (view only)</td></tr>
-      <tr><td><b>Accounts Manager</b></td><td>Dashboard + Excel download, Stock &amp; movements, Day closings, Scratch log</td><td>Nothing (view only)</td></tr>
+      <tr><td><b>Admin</b></td><td>Everything</td><td>Everything, including users and branch PINs</td></tr>
+      <tr><td><b>Marketing</b></td><td>Dashboard, Stock, Prizes, Campaign &amp; branding, Scratch log</td><td>Prizes and % chances, Campaign &amp; branding</td></tr>
+      <tr><td><b>Inventory</b></td><td>Stock, Day closings, Reports, Scratch log</td><td>Gift master, Purchase entry, Stock transfer; submits inventory reports</td></tr>
+      <tr><td><b>Sales Manager</b></td><td>Dashboard, Stock, Day closings, Prizes, Reports, Scratch log</td><td>Nothing (view only)</td></tr>
+      <tr><td><b>Accounts Manager</b></td><td>Dashboard + Excel, Stock &amp; movements, Day closings, Reports, Scratch log</td><td>Nothing (view only)</td></tr>
     </tbody></table>
   </div>
 </section>
@@ -235,9 +264,9 @@ const locName = id => id == null || id === '' ? 'Head Office' : ((branches.find(
 const brName = id => (branches.find(b => b.id === id) || {}).name || '';
 
 function view(v){
-  ['login','dash','stock','closings','prizes','branches','camp','log','users','norole','config'].forEach(x => { $('v-'+x).hidden = x !== v; });
+  ['login','dash','stock','closings','prizes','branches','camp','log','reports','me','users','norole','config'].forEach(x => { $('v-'+x).hidden = x !== v; });
   document.querySelectorAll('#tabs button').forEach(b => b.setAttribute('aria-selected', b.dataset.v === v));
-  ({dash:loadDash, stock:loadStock, closings:loadClosings, prizes:loadPrizes, branches:loadBranches, camp:loadCamp, log:loadLog, users:loadUsers})[v]?.();
+  ({dash:loadDash, stock:loadStock, closings:loadClosings, prizes:loadPrizes, branches:loadBranches, camp:loadCamp, log:loadLog, users:loadUsers, reports:loadReports})[v]?.();
 }
 document.querySelectorAll('#tabs button').forEach(b => b.addEventListener('click', () => view(b.dataset.v)));
 
@@ -251,20 +280,22 @@ async function boot(){
   document.querySelectorAll('#tabs button').forEach(b => { b.hidden = !ROLE_TABS[role].includes(b.dataset.v); });
   $('who').hidden = false; $('tabs').hidden = false; $('meLbl').textContent = `${me.name || session.user.email} · ${ROLES[role]}`;
   await Promise.all([loadBranchList(), loadItems(), loadCampData()]);
-  view('dash');
+  view(ROLE_TABS[role][0]);
 }
+$('myPass').addEventListener('click', () => view('me'));
 $('nrLogout').addEventListener('click', async () => { await sb.auth.signOut(); boot(); });
 
 /* ---------- roles: what each person can see and change ---------- */
-const ROLES = {admin: 'Admin', marketing: 'Marketing', sales: 'Sales Manager', accounts: 'Accounts Manager'};
+const ROLES = {admin: 'Admin', marketing: 'Marketing', inventory: 'Inventory', sales: 'Sales Manager', accounts: 'Accounts Manager'};
 const ROLE_TABS = {
-  admin:     ['dash','stock','closings','prizes','branches','camp','log','users'],
+  admin:     ['dash','stock','closings','prizes','branches','camp','log','reports','users'],
   marketing: ['dash','stock','prizes','camp','log'],
-  sales:     ['dash','stock','closings','prizes','log'],
-  accounts:  ['dash','stock','closings','log']
+  inventory: ['stock','closings','reports','log'],
+  sales:     ['dash','stock','closings','prizes','reports','log'],
+  accounts:  ['dash','stock','closings','reports','log']
 };
 let role = null;
-const canEdit = area => role === 'admin' || (role === 'marketing' && (area === 'prizes' || area === 'camp'));
+const canEdit = area => role === 'admin' || (role === 'marketing' && (area === 'prizes' || area === 'camp')) || (role === 'inventory' && (area === 'stock' || area === 'reports'));
 function applyLocks(){
   if (!role) return;
   const lock = (sel, on) => document.querySelectorAll(sel).forEach(el => { el.disabled = on; });
@@ -645,7 +676,7 @@ async function loadCamp(){
   $('bName').value = c.brand_name || '@less fashion'; $('bColor').value = c.color || '#741233'; $('bAccent').value = c.accent || '#e2ad37'; $('bTerms').value = c.terms || '';
   $('logoPrev').src = c.logo || ''; $('logoPrev').hidden = !c.logo; $('logoFile').value = '';
   $('cName').value = c.name; $('cMin').value = c.min_bill; $('cVal').value = c.validity_days; $('cStart').value = c.start_date || ''; $('cEnd').value = c.end_date || '';
-  $('cSecond').value = c.second_card_min ?? ''; $('cOnce').value = c.once_per_day ? '1' : '0'; $('cActive').value = c.active ? '1' : '0'; $('campMsg').textContent = '';
+  $('cSecond').value = c.second_card_min ?? ''; $('cTheme').value = c.theme || 'normal'; $('cOnce').value = c.once_per_day ? '1' : '0'; $('cActive').value = c.active ? '1' : '0'; $('campMsg').textContent = '';
 }
 $('logoFile').addEventListener('change', async () => {
   const f = $('logoFile').files[0]; if (!f) return;
@@ -657,7 +688,7 @@ $('campForm').addEventListener('submit', async e => {
   e.preventDefault();
   const row = {brand_name: $('bName').value.trim() || '@less fashion', color: $('bColor').value, accent: $('bAccent').value, terms: $('bTerms').value.trim(),
     name: $('cName').value.trim() || 'Scratch & Win', min_bill: Math.max(0, Number($('cMin').value) || 0), validity_days: Math.max(1, Number($('cVal').value) || 30),
-    start_date: $('cStart').value || null, end_date: $('cEnd').value || null, once_per_day: $('cOnce').value === '1', active: $('cActive').value === '1', second_card_min: $('cSecond').value === '' ? null : Math.max(0, Number($('cSecond').value) || 0)};
+    start_date: $('cStart').value || null, end_date: $('cEnd').value || null, once_per_day: $('cOnce').value === '1', active: $('cActive').value === '1', second_card_min: $('cSecond').value === '' ? null : Math.max(0, Number($('cSecond').value) || 0), theme: $('cTheme').value};
   if (newLogo !== undefined) row.logo = newLogo;
   const {error} = await sb.from('campaign').update(row).eq('id', 1);
   $('campMsg').className = error ? 'err' : 'okmsg';
@@ -685,26 +716,119 @@ $('usRole').innerHTML = Object.entries(ROLES).map(([k, v]) => `<option value="${
 async function loadUsers(){
   const {data, error} = await sb.from('app_users').select('*').order('role').order('email');
   if (error) { $('usTable').innerHTML = `<tr><td class="err">${esc(errText(error))}</td></tr>`; return; }
-  $('usTable').innerHTML = `<thead><tr><th>Email</th><th>Name</th><th>Role</th><th>Active</th><th></th></tr></thead><tbody>` +
+  $('usTable').innerHTML = `<thead><tr><th>Email</th><th>Name</th><th>Role</th><th>Active</th><th></th><th>Reset password</th></tr></thead><tbody>` +
     data.map((u, i) => `<tr><td>${esc(u.email)}</td><td><input id="un${i}" value="${esc(u.name || '')}" aria-label="Name"></td>
       <td><select id="ur${i}" aria-label="Role">${Object.entries(ROLES).map(([k, v]) => `<option value="${k}"${k === u.role ? ' selected' : ''}>${v}</option>`).join('')}</select></td>
       <td><select id="ua${i}" aria-label="Active"><option value="1"${u.active ? ' selected' : ''}>Yes</option><option value="0"${u.active ? '' : ' selected'}>No</option></select></td>
-      <td><button class="btn sm" type="button" data-us="${i}" data-email="${esc(u.email)}">Save</button> <span class="note" id="um${i}"></span></td></tr>`).join('') + '</tbody>';
+      <td><button class="btn sm" type="button" data-us="${i}" data-email="${esc(u.email)}">Save</button></td>
+      <td><div class="flex" style="gap:6px"><input id="up${i}" type="text" placeholder="New password" style="width:150px" autocomplete="off"><button class="btn ghost sm" type="button" data-pw="${i}" data-email="${esc(u.email)}">Set</button></div><span class="note" id="um${i}"></span></td></tr>`).join('') + '</tbody>';
 }
 $('usTable').addEventListener('click', async e => {
-  const i = e.target.dataset.us; if (i == null) return;
-  const email = e.target.dataset.email, me = (await sb.auth.getUser()).data.user?.email;
-  if (email === (me || '').toLowerCase() && ($('ur' + i).value !== 'admin' || $('ua' + i).value !== '1')) { $('um' + i).textContent = 'You cannot remove your own admin access.'; return; }
+  const i = e.target.dataset.us ?? e.target.dataset.pw; if (i == null) return;
+  const email = e.target.dataset.email;
+  if (e.target.dataset.pw != null) {
+    const {error} = await sb.rpc('admin_set_password', {p_email: email, p_password: $('up' + i).value});
+    $('um' + i).textContent = error ? errText(error) : 'Password changed'; if (!error) $('up' + i).value = ''; return;
+  }
+  const me = ((await sb.auth.getUser()).data.user?.email || '').toLowerCase();
+  if (email === me && ($('ur' + i).value !== 'admin' || $('ua' + i).value !== '1')) { $('um' + i).textContent = 'You cannot remove your own admin access.'; return; }
   const {error} = await sb.from('app_users').update({name: $('un' + i).value.trim(), role: $('ur' + i).value, active: $('ua' + i).value === '1'}).eq('email', email);
   $('um' + i).textContent = error ? errText(error) : 'Saved';
 });
 $('usForm').addEventListener('submit', async e => {
-  e.preventDefault(); $('usErr').textContent = '';
-  const email = $('usEmail').value.trim().toLowerCase();
-  if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) { $('usErr').textContent = 'Enter a valid email.'; return; }
-  const {error} = await sb.from('app_users').insert({email, name: $('usName').value.trim() || null, role: $('usRole').value});
-  if (error) { $('usErr').textContent = /duplicate/i.test(error.message) ? 'This email is already added.' : errText(error); return; }
-  $('usEmail').value = ''; $('usName').value = ''; loadUsers();
+  e.preventDefault(); const m = $('usErr'); m.className = 'err'; m.textContent = '';
+  const {error} = await sb.rpc('admin_create_user', {p_email: $('usEmail').value, p_name: $('usName').value, p_role: $('usRole').value, p_password: $('usPass').value});
+  if (error) { m.textContent = errText(error); return; }
+  m.className = 'okmsg'; m.textContent = `Login created for ${$('usEmail').value.trim().toLowerCase()} (${ROLES[$('usRole').value]}).`;
+  $('usEmail').value = ''; $('usName').value = ''; $('usPass').value = ''; loadUsers();
+});
+
+/* ---------- my password ---------- */
+$('meForm').addEventListener('submit', async e => {
+  e.preventDefault(); const m = $('meMsg'); m.className = 'err';
+  if ($('meNew').value.length < 6) { m.textContent = 'Password must be at least 6 characters.'; return; }
+  if ($('meNew').value !== $('meNew2').value) { m.textContent = 'The two passwords do not match.'; return; }
+  const {error} = await sb.auth.updateUser({password: $('meNew').value});
+  if (error) { m.textContent = 'Could not change password: ' + error.message; return; }
+  m.className = 'okmsg'; m.textContent = 'Password changed. Use the new password next time you log in.'; $('meNew').value = ''; $('meNew2').value = '';
+});
+
+/* ---------- inventory reports ---------- */
+$('rpTo').value = today(); $('rpFrom').value = today().slice(0, 8) + '01';
+let rpData = null;
+$('rpMake').addEventListener('click', async () => {
+  $('rpOut').innerHTML = '<p class="note">Making report…</p>';
+  const {data, error} = await sb.rpc('inventory_report', {p_from: $('rpFrom').value, p_to: $('rpTo').value});
+  if (error) { $('rpOut').innerHTML = `<p class="err">${esc(errText(error))}</p>`; return; }
+  rpData = data; showReport(data, null);
+});
+function reportHtml(d, meta){
+  const locs = d.locations || [], its = (d.items || []).filter(i => Number(i.opening) || Number(i.purchased) || Number(i.closing) || Number(i.given));
+  const brs = locs.filter(l => l.id != null);
+  const tot = k => its.reduce((a, i) => a + Number(i[k] || 0), 0);
+  const cl = d.closings || {};
+  return `<div class="rep">${camp.logo ? `<img src="${camp.logo}" alt="" style="height:44px">` : ''}
+    <h1>${esc(brand)} – Inventory report</h1>
+    <p class="note">${fmtD(d.date_from)} to ${fmtD(d.date_to)} · made ${fmtDT(d.made_at)}${meta ? ` · submitted by ${esc(meta.by_user || '')} on ${fmtDT(meta.created_at)}` : ''}</p>
+    ${meta && meta.note ? `<p><b>Note:</b> ${esc(meta.note)}</p>` : ''}
+    <h2>Summary</h2>
+    <table><tbody>
+      <tr><td>Purchases in period</td><td class="n b">${num(tot('purchased'))} pcs · ${rupee(tot('purchased_value'))}</td></tr>
+      <tr><td>Gifts given to customers</td><td class="n b">${num(tot('given'))} pcs</td></tr>
+      <tr><td>Closing stock value (all locations)</td><td class="n b">${rupee(tot('closing_value'))}</td></tr>
+      <tr><td>Day closings done</td><td class="n b">${num(cl.days_closed)} of ${num(cl.days_expected)} branch-days</td></tr>
+      <tr><td>Stock shortage / excess found at closing</td><td class="n b">${num(cl.shortage)} / +${num(cl.excess)} pcs</td></tr>
+    </tbody></table>
+    <h2>Gift-wise movement</h2>
+    <div class="scroll"><table><thead><tr><th>Gift</th><th class="n">Opening</th><th class="n">Purchased</th><th class="n">Given</th><th class="n">Adjusted</th><th class="n">Closing</th><th class="n">Price</th><th class="n">Closing value</th></tr></thead><tbody>
+      ${its.map(i => `<tr><td>${esc(i.name)}</td><td class="n">${num(i.opening)}</td><td class="n">${num(i.purchased)}</td><td class="n">${num(i.given)}</td><td class="n">${num(i.adjusted)}</td><td class="n b">${num(i.closing)}</td><td class="n">${rupee(i.price)}</td><td class="n">${rupee(i.closing_value)}</td></tr>`).join('') || '<tr><td colspan="8">No stock movement.</td></tr>'}
+      <tr><td class="b">Total</td><td class="n b">${num(tot('opening'))}</td><td class="n b">${num(tot('purchased'))}</td><td class="n b">${num(tot('given'))}</td><td class="n b">${num(tot('adjusted'))}</td><td class="n b">${num(tot('closing'))}</td><td></td><td class="n b">${rupee(tot('closing_value'))}</td></tr>
+    </tbody></table></div>
+    <h2>Closing stock by location</h2>
+    <div class="scroll"><table><thead><tr><th>Gift</th>${locs.map(l => `<th class="n">${esc(l.name)}</th>`).join('')}</tr></thead><tbody>
+      ${its.map(i => `<tr><td>${esc(i.name)}</td>${locs.map(l => `<td class="n">${num((i.by_location || {})[l.id == null ? 'ho' : String(l.id)] || 0)}</td>`).join('')}</tr>`).join('')}
+    </tbody></table></div>
+    ${brs.length ? `<h2>Stock sent to branches in period</h2>
+    <div class="scroll"><table><thead><tr><th>Gift</th>${brs.map(l => `<th class="n">${esc(l.name)}</th>`).join('')}</tr></thead><tbody>
+      ${its.map(i => `<tr><td>${esc(i.name)}</td>${brs.map(l => `<td class="n">${num((i.sent_to || {})[String(l.id)] || 0)}</td>`).join('')}</tr>`).join('')}
+    </tbody></table></div>` : ''}</div>`;
+}
+function reportCsv(d){
+  const q = v => '"' + String(v ?? '').replace(/"/g, '""') + '"', locs = d.locations || [];
+  const rows = [['Gift','Opening','Purchased','Purchased value','Given','Adjusted','Closing','Price','Closing value'].concat(locs.map(l => 'Stock at ' + l.name))];
+  (d.items || []).forEach(i => rows.push([i.name, i.opening, i.purchased, i.purchased_value, i.given, i.adjusted, i.closing, i.price, i.closing_value].concat(locs.map(l => (i.by_location || {})[l.id == null ? 'ho' : String(l.id)] || 0))));
+  const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob(['﻿' + rows.map(r => r.map(q).join(',')).join('\r\n')], {type: 'text/csv;charset=utf-8'}));
+  a.download = `inventory-report_${d.date_from}_to_${d.date_to}.csv`; document.body.appendChild(a); a.click(); a.remove();
+}
+function showReport(d, meta){
+  const canSubmit = !meta && canEdit('reports');
+  $('rpOut').innerHTML = `<div class="card" style="margin-top:16px">${reportHtml(d, meta)}
+    <div class="flex" style="margin-top:16px"><button class="btn dark sm" id="rpPrint" type="button">Print (A4)</button><button class="btn ghost sm" id="rpCsv" type="button">Download Excel (CSV)</button></div>
+    ${canSubmit ? `<label for="rpNote">Note for management</label><input id="rpNote" placeholder="e.g. 2 speakers damaged at Kollam"><button class="btn w" id="rpSubmit" type="button">Submit report to management</button><p class="err" id="rpMsg"></p>` : ''}</div>`;
+  $('rpPrint').addEventListener('click', () => printSlip(reportHtml(d, meta), true));
+  $('rpCsv').addEventListener('click', () => reportCsv(d));
+  const s = $('rpSubmit');
+  if (s) s.addEventListener('click', async () => {
+    s.disabled = true;
+    const {error} = await sb.rpc('submit_inventory_report', {p_from: d.date_from, p_to: d.date_to, p_note: $('rpNote').value});
+    if (error) { $('rpMsg').textContent = errText(error); s.disabled = false; return; }
+    $('rpMsg').className = 'okmsg'; $('rpMsg').textContent = 'Submitted. Management can see it under "Submitted to management".'; loadReports();
+  });
+}
+let rpRows = [];
+async function loadReports(){
+  const {data, error} = await sb.from('inv_reports').select('id,created_at,by_user,date_from,date_to,note').order('id', {ascending: false}).limit(50);
+  if (error) { $('rpList').innerHTML = `<tr><td class="err">${esc(errText(error))}</td></tr>`; return; }
+  rpRows = data;
+  $('rpList').innerHTML = `<thead><tr><th>Submitted</th><th>By</th><th>Period</th><th>Note</th><th></th></tr></thead><tbody>` +
+    (data.length ? data.map(r => `<tr><td>${fmtDT(r.created_at)}</td><td>${esc(r.by_user || '')}</td><td>${fmtD(r.date_from)} – ${fmtD(r.date_to)}</td><td>${esc(r.note || '')}</td><td><button class="btn ghost sm" type="button" data-rp="${r.id}">Open</button></td></tr>`).join('')
+    : '<tr><td colspan="5">No reports submitted yet.</td></tr>') + '</tbody>';
+}
+$('rpList').addEventListener('click', async e => {
+  const id = e.target.dataset.rp; if (!id) return;
+  const {data, error} = await sb.from('inv_reports').select('*').eq('id', id).single();
+  if (error) { $('rpOut').innerHTML = `<p class="err">${esc(errText(error))}</p>`; return; }
+  showReport(data.data, data); $('rpOut').scrollIntoView({behavior: 'smooth'});
 });
 
 boot();

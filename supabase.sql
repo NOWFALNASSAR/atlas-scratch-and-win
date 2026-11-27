@@ -1,5 +1,5 @@
 -- =====================================================================
--- @less fashion Scratch & Win  -  Supabase database (version 6: gift master with price, purchase entry, Excel-style transfer)
+-- @less fashion Scratch & Win  -  Supabase database (version 9: @less artwork + December plan support)
 -- Supabase > SQL Editor > New query > paste this whole file > Run
 -- Safe to run on a new project AND on top of any earlier version (keeps all data).
 -- =====================================================================
@@ -38,6 +38,7 @@ alter table public.campaign add column if not exists brand_name text not null de
 alter table public.campaign add column if not exists logo       text;
 alter table public.campaign add column if not exists color      text not null default '#741233';
 alter table public.campaign add column if not exists accent     text not null default '#e2ad37';
+alter table public.campaign add column if not exists theme text not null default 'normal';   -- v8: 'normal' or 'xmas'
 alter table public.campaign add column if not exists second_card_min numeric;   -- v5: bills at/above this amount can get a 2nd card (empty = off)
 alter table public.campaign add column if not exists terms      text not null default 'Valid at all @less fashion showrooms. Not exchangeable for cash.';
 
@@ -151,13 +152,16 @@ create table if not exists public.closings (
 -- ---------- Head Office users and roles (v3) ----------
 -- admin = everything · marketing = edit prizes & campaign/branding, view the rest
 -- sales = view only · accounts = view only (dashboard, closings, stock, log, Excel)
+-- inventory (v7) = gift master, purchase entry, transfers; submits inventory reports to management
 create table if not exists public.app_users (
   email       text primary key,
   name        text,
-  role        text not null check (role in ('admin','marketing','sales','accounts')),
+  role        text not null,
   active      boolean not null default true,
   created_at  timestamptz not null default now()
 );
+alter table public.app_users drop constraint if exists app_users_role_check;
+alter table public.app_users add constraint app_users_role_check check (role in ('admin','marketing','sales','accounts','inventory'));
 -- The owner's login. CHANGE this email if a different person is the main admin.
 insert into public.app_users (email, name, role) values ('nowfalnassar@gmail.com', 'Nowfal', 'admin') on conflict (email) do nothing;
 
@@ -172,10 +176,23 @@ set search_path = public as $$
     'name', (select name from public.app_users where email = lower(coalesce(auth.jwt() ->> 'email',''))))
 $$;
 
+-- inventory reports submitted to management (v7)
+create table if not exists public.inv_reports (
+  id          bigint generated always as identity primary key,
+  created_at  timestamptz not null default now(),
+  by_user     text,
+  date_from   date not null,
+  date_to     date not null,
+  note        text,
+  data        jsonb not null
+);
+
 -- ---------- Security: tables only for Head Office users with a role ----------
 do $$ declare t text; w text; begin
-  foreach t in array array['branches','campaign','prizes','scratches','items','stock_moves','closings','app_users','slabs','slab_prizes'] loop
-    w := case when t in ('campaign','prizes','slabs','slab_prizes') then $q$public._role() in ('admin','marketing')$q$ else $q$public._role() = 'admin'$q$ end;
+  foreach t in array array['branches','campaign','prizes','scratches','items','stock_moves','closings','app_users','slabs','slab_prizes','inv_reports'] loop
+    w := case when t in ('campaign','prizes','slabs','slab_prizes') then $q$public._role() in ('admin','marketing')$q$
+              when t in ('items','inv_reports') then $q$public._role() in ('admin','inventory')$q$
+              else $q$public._role() = 'admin'$q$ end;
     execute format('alter table public.%I enable row level security', t);
     execute format('drop policy if exists admin_all on public.%I', t);
     execute format('drop policy if exists hq_read on public.%I', t);
@@ -223,7 +240,7 @@ $$;
 create or replace function public._settings_json()
 returns json language sql stable security definer set search_path = public as $$
   select json_build_object('campaign', c.name, 'min_bill', c.min_bill, 'brand_name', c.brand_name,
-    'logo', c.logo, 'color', c.color, 'accent', c.accent, 'terms', c.terms, 'validity_days', c.validity_days, 'second_card_min', c.second_card_min)
+    'logo', c.logo, 'color', c.color, 'accent', c.accent, 'terms', c.terms, 'validity_days', c.validity_days, 'second_card_min', c.second_card_min, 'theme', c.theme)
   from public.campaign c where id = 1
 $$;
 
@@ -518,7 +535,7 @@ end $$;
 create or replace function public.admin_stock_in(p_item bigint, p_branch bigint, p_qty numeric, p_note text)
 returns json language plpgsql security definer set search_path = public as $$
 begin
-  if public._role() is distinct from 'admin' then raise exception 'NOT_ADMIN'; end if;
+  if public._role() not in ('admin','inventory') or public._role() is null then raise exception 'NOT_ADMIN'; end if;
   if p_qty is null or p_qty <= 0 then raise exception 'QTY_BAD'; end if;
   insert into public.stock_moves (item_id, branch_id, qty, kind, note, by_user)
   values (p_item, p_branch, p_qty, 'in', nullif(trim(coalesce(p_note,'')),''), lower(auth.jwt() ->> 'email'));
@@ -530,7 +547,7 @@ create or replace function public.admin_transfer(p_item bigint, p_from bigint, p
 returns json language plpgsql security definer set search_path = public as $$
 declare v_ref text := 'TR-' || to_char(now() at time zone 'Asia/Kolkata', 'YYMMDD-HH24MISS'); v_user text;
 begin
-  if public._role() is distinct from 'admin' then raise exception 'NOT_ADMIN'; end if;
+  if public._role() not in ('admin','inventory') or public._role() is null then raise exception 'NOT_ADMIN'; end if;
   if p_qty is null or p_qty <= 0 then raise exception 'QTY_BAD'; end if;
   if p_from is not distinct from p_to then raise exception 'SAME_LOCATION'; end if;
   perform pg_advisory_xact_lock(coalesce(p_from, 0));
@@ -549,7 +566,7 @@ returns json language plpgsql security definer set search_path = public as $$
 declare v_ref text := 'PU-' || to_char(now() at time zone 'Asia/Kolkata', 'YYMMDD-HH24MISS'); v_user text := lower(auth.jwt() ->> 'email');
         l jsonb; v_n int := 0; v_val numeric := 0;
 begin
-  if public._role() is distinct from 'admin' then raise exception 'NOT_ADMIN'; end if;
+  if public._role() not in ('admin','inventory') or public._role() is null then raise exception 'NOT_ADMIN'; end if;
   if jsonb_typeof(p_lines) <> 'array' or jsonb_array_length(p_lines) = 0 then raise exception 'NO_LINES'; end if;
   for l in select * from jsonb_array_elements(p_lines) loop
     if coalesce((l->>'qty')::numeric, 0) <= 0 then raise exception 'QTY_BAD'; end if;
@@ -569,7 +586,7 @@ returns json language plpgsql security definer set search_path = public as $$
 declare v_ref text := 'TR-' || to_char(now() at time zone 'Asia/Kolkata', 'YYMMDD-HH24MISS'); v_user text := lower(auth.jwt() ->> 'email');
         r record; v_n int := 0;
 begin
-  if public._role() is distinct from 'admin' then raise exception 'NOT_ADMIN'; end if;
+  if public._role() not in ('admin','inventory') or public._role() is null then raise exception 'NOT_ADMIN'; end if;
   if jsonb_typeof(p_lines) <> 'array' or jsonb_array_length(p_lines) = 0 then raise exception 'NO_LINES'; end if;
   perform pg_advisory_xact_lock(coalesce(p_from, 0));
   -- check every item has enough stock at the source for the total being sent
@@ -636,6 +653,112 @@ set search_path = public as $$
   )
 $$;
 
+-- ---------- v7: inventory report ----------
+create or replace function public.inventory_report(p_from date, p_to date)
+returns json language plpgsql security definer set search_path = public as $$
+begin
+  if public._role() is null then raise exception 'NO_ROLE'; end if;
+  return json_build_object(
+    'date_from', p_from, 'date_to', p_to, 'made_at', now(),
+    'locations', (select json_agg(x order by x.sort, x.name) from (
+        select null::bigint id, 'Head Office' name, 0 sort
+        union all select id, name, 1 from public.branches where active) x),
+    'items', (select coalesce(json_agg(x order by x.name), '[]'::json) from (
+      select i.id, i.name, i.unit, i.price,
+        coalesce(sum(m.qty) filter (where m.day <  p_from), 0) as opening,
+        coalesce(sum(m.qty) filter (where m.day between p_from and p_to and m.kind = 'in'), 0) as purchased,
+        coalesce(sum(m.qty * coalesce(m.price, i.price)) filter (where m.day between p_from and p_to and m.kind = 'in'), 0) as purchased_value,
+        coalesce(-sum(m.qty) filter (where m.day between p_from and p_to and m.kind = 'issue'), 0) as given,
+        coalesce(sum(m.qty) filter (where m.day between p_from and p_to and m.kind = 'adjust'), 0) as adjusted,
+        coalesce(sum(m.qty) filter (where m.day <= p_to), 0) as closing,
+        coalesce(sum(m.qty) filter (where m.day <= p_to), 0) * i.price as closing_value,
+        (select coalesce(json_object_agg(coalesce(b::text,'ho'), q), '{}'::json) from (
+           select m2.branch_id b, sum(m2.qty) q from public.stock_moves m2 where m2.item_id = i.id and m2.day <= p_to group by m2.branch_id) z) as by_location,
+        (select coalesce(json_object_agg(b::text, q), '{}'::json) from (
+           select m3.branch_id b, sum(m3.qty) q from public.stock_moves m3
+           where m3.item_id = i.id and m3.kind = 'transfer_in' and m3.day between p_from and p_to and m3.branch_id is not null group by m3.branch_id) z) as sent_to
+      from public.items i left join public.stock_moves m on m.item_id = i.id
+      group by i.id, i.name, i.unit, i.price) x),
+    'closings', (select json_build_object(
+        'days_expected', (select count(*) from public.branches where active) * (p_to - p_from + 1),
+        'days_closed', (select count(*) from public.closings c join public.branches b on b.id = c.branch_id where b.active and c.day between p_from and p_to),
+        'shortage', (select coalesce(sum((l->>'difference')::numeric) filter (where (l->>'difference')::numeric < 0), 0)
+                     from public.closings c, jsonb_array_elements(c.lines) l where c.day between p_from and p_to),
+        'excess', (select coalesce(sum((l->>'difference')::numeric) filter (where (l->>'difference')::numeric > 0), 0)
+                     from public.closings c, jsonb_array_elements(c.lines) l where c.day between p_from and p_to))));
+end $$;
+
+create or replace function public.submit_inventory_report(p_from date, p_to date, p_note text)
+returns bigint language plpgsql security definer set search_path = public as $$
+declare v_id bigint;
+begin
+  if public._role() not in ('admin','inventory') or public._role() is null then raise exception 'NOT_ADMIN'; end if;
+  if p_from is null or p_to is null or p_from > p_to then raise exception 'RANGE_BAD'; end if;
+  insert into public.inv_reports (by_user, date_from, date_to, note, data)
+  values (lower(auth.jwt() ->> 'email'), p_from, p_to, nullif(trim(coalesce(p_note,'')),''), public.inventory_report(p_from, p_to)::jsonb)
+  returning id into v_id;
+  return v_id;
+end $$;
+
+-- ---------- v7: create Head Office logins from the app (admin only) ----------
+create or replace function public.admin_create_user(p_email text, p_name text, p_role text, p_password text)
+returns json language plpgsql security definer set search_path = public, extensions, auth as $$
+declare v_email text := lower(trim(coalesce(p_email,''))); v_uid uuid;
+begin
+  if public._role() is distinct from 'admin' then raise exception 'NOT_ADMIN'; end if;
+  if v_email !~ '^[^@\s]+@[^@\s]+\.[^@\s]+$' then raise exception 'EMAIL_BAD'; end if;
+  if p_role not in ('admin','marketing','sales','accounts','inventory') then raise exception 'ROLE_BAD'; end if;
+  if length(coalesce(p_password,'')) < 6 then raise exception 'PASSWORD_SHORT'; end if;
+  select id into v_uid from auth.users where lower(email) = v_email limit 1;
+  if v_uid is null then
+    v_uid := gen_random_uuid();
+    insert into auth.users (instance_id, id, aud, role, email, encrypted_password, email_confirmed_at,
+                            raw_app_meta_data, raw_user_meta_data, created_at, updated_at,
+                            confirmation_token, recovery_token, email_change_token_new, email_change)
+    values ('00000000-0000-0000-0000-000000000000', v_uid, 'authenticated', 'authenticated', v_email,
+            crypt(p_password, gen_salt('bf')), now(),
+            '{"provider":"email","providers":["email"]}'::jsonb, jsonb_build_object('name', p_name), now(), now(),
+            '', '', '', '');
+    insert into auth.identities (id, user_id, identity_data, provider, provider_id, last_sign_in_at, created_at, updated_at)
+    values (gen_random_uuid(), v_uid, jsonb_build_object('sub', v_uid::text, 'email', v_email, 'email_verified', true),
+            'email', v_uid::text, now(), now(), now());
+  else
+    update auth.users set encrypted_password = crypt(p_password, gen_salt('bf')),
+           email_confirmed_at = coalesce(email_confirmed_at, now()), updated_at = now() where id = v_uid;
+  end if;
+  insert into public.app_users (email, name, role, active) values (v_email, nullif(trim(coalesce(p_name,'')),''), p_role, true)
+  on conflict (email) do update set name = excluded.name, role = excluded.role, active = true;
+  return json_build_object('ok', true, 'email', v_email);
+end $$;
+
+create or replace function public.admin_set_password(p_email text, p_password text)
+returns json language plpgsql security definer set search_path = public, extensions, auth as $$
+declare v_n int;
+begin
+  if public._role() is distinct from 'admin' then raise exception 'NOT_ADMIN'; end if;
+  if length(coalesce(p_password,'')) < 6 then raise exception 'PASSWORD_SHORT'; end if;
+  update auth.users set encrypted_password = crypt(p_password, gen_salt('bf')),
+         email_confirmed_at = coalesce(email_confirmed_at, now()), updated_at = now()
+   where lower(email) = lower(trim(p_email));
+  get diagnostics v_n = row_count;
+  if v_n = 0 then raise exception 'NO_LOGIN'; end if;
+  return json_build_object('ok', true);
+end $$;
+
+-- ---------- v7: branch manager changes the branch PIN from the tablet ----------
+create or replace function public.change_branch_pin(p_pin text, p_new_pin text)
+returns json language plpgsql security definer set search_path = public, extensions as $$
+declare v_branch bigint;
+begin
+  v_branch := public._branch_by_pin(p_pin);
+  if v_branch is null then raise exception 'BRANCH_PIN'; end if;
+  if coalesce(p_new_pin,'') !~ '^[0-9]{6}$' then raise exception 'PIN_FORMAT'; end if;
+  if p_new_pin = p_pin then raise exception 'PIN_SAME'; end if;
+  if exists (select 1 from public.branches where pin_hash = crypt(p_new_pin, pin_hash) and id <> v_branch) then raise exception 'PIN_TAKEN'; end if;
+  update public.branches set pin_hash = crypt(p_new_pin, gen_salt('bf')) where id = v_branch;
+  return json_build_object('ok', true);
+end $$;
+
 -- ---------- Who can run what ----------
 do $$ declare f text; begin
   foreach f in array array['_branch_by_pin(text)','_stock(bigint,bigint)','_pending(bigint,bigint)','_settings_json()','_closing_data(bigint,date)','_bill_num(text)'] loop
@@ -645,12 +768,12 @@ do $$ declare f text; begin
   revoke all on function public._role() from public, anon;
   grant execute on function public._role() to authenticated;
   foreach f in array array['branch_login(text)','do_scratch(text,text,numeric,text,text,int)','check_coupon(text,text)',
-                           'redeem_coupon(text,text)','branch_stock(text)','closing_preview(text,date)','save_closing(text,date,jsonb,text)'] loop
+                           'redeem_coupon(text,text)','branch_stock(text)','change_branch_pin(text,text)','closing_preview(text,date)','save_closing(text,date,jsonb,text)'] loop
     execute 'revoke all on function public.' || f || ' from public';
     execute 'grant execute on function public.' || f || ' to anon, authenticated';
   end loop;
   foreach f in array array['admin_save_branch(bigint,text,text,boolean,numeric,numeric)','admin_stats(date,date)','admin_stock_in(bigint,bigint,numeric,text)',
-                           'admin_transfer(bigint,bigint,bigint,numeric,text)','admin_purchase(bigint,jsonb,text)','admin_transfer_batch(bigint,jsonb,text)','admin_stock_summary()','admin_closing(bigint,date)','my_role()'] loop
+                           'admin_transfer(bigint,bigint,bigint,numeric,text)','admin_purchase(bigint,jsonb,text)','admin_transfer_batch(bigint,jsonb,text)','admin_stock_summary()','admin_closing(bigint,date)','my_role()','inventory_report(date,date)','submit_inventory_report(date,date,text)','admin_create_user(text,text,text,text)','admin_set_password(text,text)'] loop
     execute 'revoke all on function public.' || f || ' from public, anon';
     execute 'grant execute on function public.' || f || ' to authenticated';
   end loop;

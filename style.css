@@ -86,3 +86,14 @@ tr.click{cursor:pointer}tr.click:hover{background:var(--card)}
   #print th,#print td{border:0;padding:1px 0;color:#000;font-size:11px}
   #print .kv{display:flex;justify-content:space-between;gap:6px}
 }
+
+/* ---------- A4 report printing (v7) ---------- */
+@media print{
+  #print.a4{font:11px/1.4 Inter,Arial,sans-serif}
+  #print.a4 .slip{width:auto;padding:0}
+  #print.a4 h1{font-size:20px;margin:0 0 2mm}#print.a4 h2{font-size:14px;margin:5mm 0 2mm}
+  #print.a4 img{max-width:45mm;max-height:16mm;margin:0 0 2mm;filter:none}
+  #print.a4 table{font-size:10px}#print.a4 th,#print.a4 td{border-bottom:1px solid #bbb;padding:1.2mm 1mm;font-size:10px}
+  #print.a4 th{text-align:left;font-weight:700}
+}
+.rep h1{font-size:24px;margin-bottom:4px}.rep h2{font-size:18px;margin:22px 0 8px}

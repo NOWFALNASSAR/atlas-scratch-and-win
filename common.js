@@ -38,6 +38,11 @@ window.App = (() => {
     FUTURE_DAY:'You cannot close a future date.',
     QTY_BAD:'Enter a quantity above 0.',
     NO_LINES:'Add at least one line.',
+    PASSWORD_SHORT:'Password must be at least 6 characters.',
+    EMAIL_BAD:'Enter a valid email.',
+    ROLE_BAD:'Choose a role.',
+    NO_LOGIN:'No login found for this email.',
+    PIN_SAME:'The new PIN is the same as the old PIN.',
     PRICE_BAD:'Price cannot be negative.',
     ITEM_BAD:'Choose a gift from the list.',
     SAME_LOCATION:'From and To cannot be the same.',
@@ -95,13 +100,14 @@ window.App = (() => {
   }
 
   // ---------- thermal printing ----------
-  function printSlip(html){
+  function printSlip(html, a4){
     const w = store.get('paper') || '80';
     let box = $('print');
     if (!box) { box = document.createElement('div'); box.id = 'print'; document.body.appendChild(box); }
     let st = $('pageStyle');
     if (!st) { st = document.createElement('style'); st.id = 'pageStyle'; document.head.appendChild(st); }
-    st.textContent = `@page{size:${w}mm auto;margin:0 ${w === '58' ? 3 : 4}mm}#print{--pw:${w === '58' ? '48mm' : '72mm'}}`;
+    box.className = a4 ? 'a4' : '';
+    st.textContent = a4 ? '@page{size:A4;margin:12mm}' : `@page{size:${w}mm auto;margin:0 ${w === '58' ? 3 : 4}mm}#print{--pw:${w === '58' ? '48mm' : '72mm'}}`;
     box.innerHTML = `<div class="slip">${html}</div>`;
     const imgs = [...box.querySelectorAll('img')];
     Promise.all(imgs.map(i => i.complete ? 0 : new Promise(r => { i.onload = i.onerror = r; }))).then(() => setTimeout(() => window.print(), 50));
