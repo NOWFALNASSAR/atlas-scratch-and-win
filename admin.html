@@ -123,6 +123,7 @@
 
   <div class="box">
     <div class="flex between"><h3 style="margin:0">Chance % by bill amount</h3><button class="btn sm" id="addSlab" type="button">+ Add amount slab</button></div>
+    <p class="warn" id="pctNote" hidden>View only. Chance % can be changed only by Admin or Marketing.</p>
     <p class="note">Make one column for each bill amount slab (e.g. ₹1,000–₹4,999, ₹5,000 and above) and type the % chance of each prize in that slab. Each column should total 100%. If a prize is out of stock or over its daily limit, its % is shared among the other prizes in that slab. When no slabs are set, the "Weight" column above is used instead.</p>
     <div class="scroll"><table id="slabTable" class="sticky1"></table></div>
     <p class="warn" id="slabWarn"></p>
@@ -251,6 +252,7 @@
   <div class="box"><h3>What each role can do</h3>
     <table><thead><tr><th>Role</th><th>Can see</th><th>Can change</th></tr></thead><tbody>
       <tr><td><b>Admin</b></td><td>Everything</td><td>Everything, including users and branch PINs</td></tr>
+      <tr><td><b>Administration</b></td><td>Everything</td><td>Everything (stock, branches &amp; PINs, campaign, prize pictures, users) <b>except chance %</b> and Admin logins</td></tr>
       <tr><td><b>Marketing</b></td><td>Dashboard, Stock, Prizes, Campaign &amp; branding, Scratch log</td><td>Prizes and % chances, Campaign &amp; branding</td></tr>
       <tr><td><b>Inventory</b></td><td>Stock, Day closings, Reports, Scratch log</td><td>Gift master, Purchase entry, Stock transfer; submits inventory reports</td></tr>
       <tr><td><b>Sales Manager</b></td><td>Dashboard, Stock, Day closings, Prizes, Reports, Scratch log</td><td>Nothing (view only)</td></tr>
@@ -304,23 +306,33 @@ $('myPass').addEventListener('click', () => view('me'));
 $('nrLogout').addEventListener('click', async () => { await sb.auth.signOut(); boot(); });
 
 /* ---------- roles: what each person can see and change ---------- */
-const ROLES = {admin: 'Admin', marketing: 'Marketing', inventory: 'Inventory', sales: 'Sales Manager', accounts: 'Accounts Manager'};
+const ROLES = {admin: 'Admin', administration: 'Administration', marketing: 'Marketing', inventory: 'Inventory', sales: 'Sales Manager', accounts: 'Accounts Manager'};
 const ROLE_TABS = {
   admin:     ['dash','stock','closings','prizes','branches','camp','log','gifts','reports','users'],
+  administration: ['dash','stock','closings','prizes','branches','camp','log','gifts','reports','users'],
   marketing: ['dash','stock','prizes','camp','log','gifts'],
   inventory: ['stock','closings','gifts','reports','log'],
   sales:     ['dash','stock','closings','prizes','gifts','reports','log'],
   accounts:  ['dash','stock','closings','gifts','reports','log']
 };
 let role = null;
-const canEdit = area => role === 'admin' || (role === 'marketing' && (area === 'prizes' || area === 'camp')) || (role === 'inventory' && (area === 'stock' || area === 'reports'));
+const canEdit = area => role === 'admin' || (role === 'administration' && area !== 'percent') || (role === 'marketing' && (area === 'prizes' || area === 'camp')) || (role === 'inventory' && (area === 'stock' || area === 'reports'));
 function applyLocks(){
   if (!role) return;
   const lock = (sel, on) => document.querySelectorAll(sel).forEach(el => { el.disabled = on; });
   const hide = (ids, on) => ids.forEach(id => { if ($(id)) $(id).hidden = on; });
   hide(['puBox','trBox','itForm'], !canEdit('stock'));
   lock('#itTable input, #itTable select', !canEdit('stock'));
-  lock('#pzTable input, #pzTable select, #pzTable button, #slabTable input, #slabTable button', !canEdit('prizes')); hide(['addPz','addSlab'], !canEdit('prizes'));
+  lock('#pzTable input, #pzTable select, #pzTable button', !canEdit('prizes')); hide(['addPz'], !canEdit('prizes'));
+  // v14: chance % (slabs and prize weight) only Admin / Marketing
+  const pct = role === 'admin' || role === 'marketing';
+  lock('#slabTable input, #slabTable button, #pzTable input[data-k=weight]', !pct); hide(['addSlab'], !pct);
+  if ($('pctNote')) $('pctNote').hidden = pct;
+  // Administration manages users, but not Admin logins
+  if (role === 'administration') {
+    document.querySelectorAll('#usRole option[value=admin], #usTable select[aria-label=Role] option[value=admin]').forEach(o => { if (!o.selected) o.disabled = true; });
+    document.querySelectorAll('#usTable tr').forEach(tr => { const r = tr.querySelector('select[aria-label=Role]'); if (r && r.value === 'admin') tr.querySelectorAll('input,select,button').forEach(el => { el.disabled = true; }); });
+  }
   lock('#campForm input, #campForm select, #campForm button', !canEdit('camp'));
   const cf = document.querySelector('#campForm button[type=submit]'); if (cf) cf.hidden = !canEdit('camp');
 }
@@ -752,7 +764,7 @@ $('usTable').addEventListener('click', async e => {
     $('um' + i).textContent = error ? errText(error) : 'Password changed'; if (!error) $('up' + i).value = ''; return;
   }
   const me = ((await sb.auth.getUser()).data.user?.email || '').toLowerCase();
-  if (email === me && ($('ur' + i).value !== 'admin' || $('ua' + i).value !== '1')) { $('um' + i).textContent = 'You cannot remove your own admin access.'; return; }
+  if (email === me && ($('ur' + i).value !== role || $('ua' + i).value !== '1')) { $('um' + i).textContent = 'You cannot change your own role or turn yourself off.'; return; }
   const {error} = await sb.from('app_users').update({name: $('un' + i).value.trim(), role: $('ur' + i).value, active: $('ua' + i).value === '1'}).eq('email', email);
   $('um' + i).textContent = error ? errText(error) : 'Saved';
 });

@@ -49,6 +49,7 @@ window.App = (() => {
     PIN_TAKEN:'Another branch already uses this PIN. Choose a different PIN.',
     PIN_FORMAT:'PIN must be 6 digits (numbers only).',
     NOT_ADMIN:'Only the admin can do this.',
+    NO_PERCENT:'Chance % can be changed only by Admin or Marketing.',
     NO_ROLE:'Your login has no access yet. Ask the admin to add you in Users.'
   };
   const errText = e => {

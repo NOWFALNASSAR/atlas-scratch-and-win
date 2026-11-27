@@ -1,5 +1,5 @@
 -- =====================================================================
--- @less fashion Scratch & Win  -  Supabase database (version 13: redeemed at scratch time)
+-- @less fashion Scratch & Win  -  Supabase database (version 14: Administration role)
 -- Supabase > SQL Editor > New query > paste this whole file > Run
 -- Safe to run on a new project AND on top of any earlier version (keeps all data).
 -- =====================================================================
@@ -164,7 +164,7 @@ create table if not exists public.app_users (
   created_at  timestamptz not null default now()
 );
 alter table public.app_users drop constraint if exists app_users_role_check;
-alter table public.app_users add constraint app_users_role_check check (role in ('admin','marketing','sales','accounts','inventory'));
+alter table public.app_users add constraint app_users_role_check check (role in ('admin','administration','marketing','sales','accounts','inventory'));
 -- The owner's login. CHANGE this email if a different person is the main admin.
 insert into public.app_users (email, name, role) values ('nowfalnassar@gmail.com', 'Nowfal', 'admin') on conflict (email) do nothing;
 
@@ -190,12 +190,28 @@ create table if not exists public.inv_reports (
   data        jsonb not null
 );
 
+-- v14: Administration cannot change gift chance % (prize weight). New prizes from them start at 0.
+create or replace function public._guard_prize_weight() returns trigger language plpgsql security definer set search_path = public as $$
+begin
+  if public._role() = 'administration' then
+    if tg_op = 'INSERT' then new.weight := 0;
+    elsif new.weight is distinct from old.weight then raise exception 'NO_PERCENT';
+    end if;
+  end if;
+  return new;
+end $$;
+drop trigger if exists prizes_guard_weight on public.prizes;
+create trigger prizes_guard_weight before insert or update on public.prizes for each row execute function public._guard_prize_weight();
+
 -- ---------- Security: tables only for Head Office users with a role ----------
 do $$ declare t text; w text; begin
   foreach t in array array['branches','campaign','prizes','scratches','items','stock_moves','closings','app_users','slabs','slab_prizes','inv_reports'] loop
-    w := case when t in ('campaign','prizes','slabs','slab_prizes') then $q$public._role() in ('admin','marketing')$q$
-              when t in ('items','inv_reports') then $q$public._role() in ('admin','inventory')$q$
-              else $q$public._role() = 'admin'$q$ end;
+    -- v14: 'administration' runs the whole app, but never the chance % (slabs / slab_prizes / prize weight)
+    w := case when t in ('campaign','prizes') then $q$public._role() in ('admin','administration','marketing')$q$
+              when t in ('slabs','slab_prizes') then $q$public._role() in ('admin','marketing')$q$
+              when t in ('items','inv_reports') then $q$public._role() in ('admin','administration','inventory')$q$
+              when t = 'app_users' then $q$(public._role() = 'admin' or (public._role() = 'administration' and role <> 'admin'))$q$
+              else $q$public._role() in ('admin','administration')$q$ end;
     execute format('alter table public.%I enable row level security', t);
     execute format('drop policy if exists admin_all on public.%I', t);
     execute format('drop policy if exists hq_read on public.%I', t);
@@ -541,7 +557,7 @@ returns bigint language plpgsql security definer
 set search_path = public, extensions as $$
 declare v_id bigint;
 begin
-  if public._role() is distinct from 'admin' then raise exception 'NOT_ADMIN'; end if;
+  if public._role() not in ('admin','administration') or public._role() is null then raise exception 'NOT_ADMIN'; end if;
   if coalesce(trim(p_name),'') = '' then raise exception 'NAME_EMPTY'; end if;
   if p_bill_from is not null and p_bill_to is not null and p_bill_from > p_bill_to then raise exception 'RANGE_BAD'; end if;
   if p_pin is not null and p_pin <> '' then
@@ -570,7 +586,7 @@ end $$;
 create or replace function public.admin_stock_in(p_item bigint, p_branch bigint, p_qty numeric, p_note text)
 returns json language plpgsql security definer set search_path = public as $$
 begin
-  if public._role() not in ('admin','inventory') or public._role() is null then raise exception 'NOT_ADMIN'; end if;
+  if public._role() not in ('admin','administration','inventory') or public._role() is null then raise exception 'NOT_ADMIN'; end if;
   if p_qty is null or p_qty <= 0 then raise exception 'QTY_BAD'; end if;
   insert into public.stock_moves (item_id, branch_id, qty, kind, note, by_user)
   values (p_item, p_branch, p_qty, 'in', nullif(trim(coalesce(p_note,'')),''), lower(auth.jwt() ->> 'email'));
@@ -582,7 +598,7 @@ create or replace function public.admin_transfer(p_item bigint, p_from bigint, p
 returns json language plpgsql security definer set search_path = public as $$
 declare v_ref text := 'TR-' || to_char(now() at time zone 'Asia/Kolkata', 'YYMMDD-HH24MISS'); v_user text;
 begin
-  if public._role() not in ('admin','inventory') or public._role() is null then raise exception 'NOT_ADMIN'; end if;
+  if public._role() not in ('admin','administration','inventory') or public._role() is null then raise exception 'NOT_ADMIN'; end if;
   if p_qty is null or p_qty <= 0 then raise exception 'QTY_BAD'; end if;
   if p_from is not distinct from p_to then raise exception 'SAME_LOCATION'; end if;
   perform pg_advisory_xact_lock(coalesce(p_from, 0));
@@ -601,7 +617,7 @@ returns json language plpgsql security definer set search_path = public as $$
 declare v_ref text := 'PU-' || to_char(now() at time zone 'Asia/Kolkata', 'YYMMDD-HH24MISS'); v_user text := lower(auth.jwt() ->> 'email');
         l jsonb; v_n int := 0; v_val numeric := 0;
 begin
-  if public._role() not in ('admin','inventory') or public._role() is null then raise exception 'NOT_ADMIN'; end if;
+  if public._role() not in ('admin','administration','inventory') or public._role() is null then raise exception 'NOT_ADMIN'; end if;
   if jsonb_typeof(p_lines) <> 'array' or jsonb_array_length(p_lines) = 0 then raise exception 'NO_LINES'; end if;
   for l in select * from jsonb_array_elements(p_lines) loop
     if coalesce((l->>'qty')::numeric, 0) <= 0 then raise exception 'QTY_BAD'; end if;
@@ -621,7 +637,7 @@ returns json language plpgsql security definer set search_path = public as $$
 declare v_ref text := 'TR-' || to_char(now() at time zone 'Asia/Kolkata', 'YYMMDD-HH24MISS'); v_user text := lower(auth.jwt() ->> 'email');
         r record; v_n int := 0;
 begin
-  if public._role() not in ('admin','inventory') or public._role() is null then raise exception 'NOT_ADMIN'; end if;
+  if public._role() not in ('admin','administration','inventory') or public._role() is null then raise exception 'NOT_ADMIN'; end if;
   if jsonb_typeof(p_lines) <> 'array' or jsonb_array_length(p_lines) = 0 then raise exception 'NO_LINES'; end if;
   perform pg_advisory_xact_lock(coalesce(p_from, 0));
   -- check every item has enough stock at the source for the total being sent
@@ -727,7 +743,7 @@ create or replace function public.submit_inventory_report(p_from date, p_to date
 returns bigint language plpgsql security definer set search_path = public as $$
 declare v_id bigint;
 begin
-  if public._role() not in ('admin','inventory') or public._role() is null then raise exception 'NOT_ADMIN'; end if;
+  if public._role() not in ('admin','administration','inventory') or public._role() is null then raise exception 'NOT_ADMIN'; end if;
   if p_from is null or p_to is null or p_from > p_to then raise exception 'RANGE_BAD'; end if;
   insert into public.inv_reports (by_user, date_from, date_to, note, data)
   values (lower(auth.jwt() ->> 'email'), p_from, p_to, nullif(trim(coalesce(p_note,'')),''), public.inventory_report(p_from, p_to)::jsonb)
@@ -740,9 +756,11 @@ create or replace function public.admin_create_user(p_email text, p_name text, p
 returns json language plpgsql security definer set search_path = public, extensions, auth as $$
 declare v_email text := lower(trim(coalesce(p_email,''))); v_uid uuid;
 begin
-  if public._role() is distinct from 'admin' then raise exception 'NOT_ADMIN'; end if;
+  if public._role() not in ('admin','administration') or public._role() is null then raise exception 'NOT_ADMIN'; end if;
   if v_email !~ '^[^@\s]+@[^@\s]+\.[^@\s]+$' then raise exception 'EMAIL_BAD'; end if;
-  if p_role not in ('admin','marketing','sales','accounts','inventory') then raise exception 'ROLE_BAD'; end if;
+  if p_role not in ('admin','administration','marketing','sales','accounts','inventory') then raise exception 'ROLE_BAD'; end if;
+  -- v14: Administration cannot make or change an Admin login
+  if public._role() = 'administration' and (p_role = 'admin' or exists (select 1 from public.app_users where email = v_email and role = 'admin')) then raise exception 'NOT_ADMIN'; end if;
   if length(coalesce(p_password,'')) < 6 then raise exception 'PASSWORD_SHORT'; end if;
   select id into v_uid from auth.users where lower(email) = v_email limit 1;
   if v_uid is null then
@@ -770,7 +788,8 @@ create or replace function public.admin_set_password(p_email text, p_password te
 returns json language plpgsql security definer set search_path = public, extensions, auth as $$
 declare v_n int;
 begin
-  if public._role() is distinct from 'admin' then raise exception 'NOT_ADMIN'; end if;
+  if public._role() not in ('admin','administration') or public._role() is null then raise exception 'NOT_ADMIN'; end if;
+  if public._role() = 'administration' and exists (select 1 from public.app_users where email = lower(trim(p_email)) and role = 'admin') then raise exception 'NOT_ADMIN'; end if;
   if length(coalesce(p_password,'')) < 6 then raise exception 'PASSWORD_SHORT'; end if;
   update auth.users set encrypted_password = crypt(p_password, gen_salt('bf')),
          email_confirmed_at = coalesce(email_confirmed_at, now()), updated_at = now()
